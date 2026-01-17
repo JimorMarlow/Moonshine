@@ -11,3 +11,29 @@ bool temperature_sensor_t::init()
 {
     return sensor.setResolution(12);
 }
+
+bool temperature_sensor_t::tick()
+{
+    switch(sensor.tick())
+    {
+        case DS18_READY:
+            value = sensor.getTemp();
+            return true;
+            break;
+
+        case DS18_ERROR:
+            if(value)
+            {
+                value.reset();
+                return true;
+            }
+            break; 
+    }
+
+    return false;
+}
+
+etl::optional<float> temperature_sensor_t::temperature() const
+{
+    return value;
+}

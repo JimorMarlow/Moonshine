@@ -2,6 +2,7 @@
 
 // Вся конфигурация и платформозависимые настройки в pinout.h
 #include "pinout.h"
+#include "settings.h"
 
 //////////////////////////////////////////////////////////
 #include "etl/etl_memory.h"
@@ -12,16 +13,18 @@
 // Датчики температуры (каждый на отдельный пин для удобства подключения)
 #include "sensor_t.h"
 //  Температура в нагревательном баке (кубе) с исходным материалом.
-auto t_heater_tank = etl::make_shared<temperature_sensor_t>("TANK", "t_heater_tank", T_HEATER_TANK_PIN);  
+auto t_heater_tank = etl::make_shared<temperature_sensor_t>("H", "t_heater_tank", T_HEATER_TANK_PIN);  
 // Температура воды на выходе из дефлегматора. Показывает эффективность дефлегматора.
-auto t_deflegmator_water_out = etl::make_shared<temperature_sensor_t>("DFTR", "temperature_sensor_t", T_DEFLEGMATOR_WATER_OUT_PIN); 
+auto t_deflegmator_water_out = etl::make_shared<temperature_sensor_t>("D", "t_deflegmator_water_out", T_DEFLEGMATOR_WATER_OUT_PIN); 
 // Температура воды на выходе из охладителя (конденсатора/холодильника). Показывает 
-auto t_condenser_water_out = etl::make_shared<temperature_sensor_t>("COOL", "t_condenser_water_out", T_CONDENSER_WATER_OUT_PIN); 
+auto t_condenser_water_out = etl::make_shared<temperature_sensor_t>("C", "t_condenser_water_out", T_CONDENSER_WATER_OUT_PIN); 
+// Температура верхней части колонны
+auto t_top_column  = etl::make_shared<temperature_sensor_t>("S", "t_top_column", T_TOP_COLUMN_PIN); 
 
 // Все датчики температуры для удобства опроса в цикле
 etl::vector<etl::shared_ptr<temperature_sensor_t>> t_sensors  
 {
-  t_heater_tank, t_deflegmator_water_out, t_condenser_water_out
+  t_top_column, t_deflegmator_water_out, t_condenser_water_out, t_heater_tank
 };
 
 void setup() {
@@ -38,18 +41,24 @@ void setup() {
 
 void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
 {
-  if (t->sensor.tick()) 
+  if (t->tick()) 
   {
+      Serial.print(settings::get_uptime_string());
+      Serial.print(" ");
       Serial.print(t->name);
       Serial.print(": ");
-      Serial.print(t->sensor.getTemp());
-      Serial.print("°C, ");
+      if(auto value = t->temperature(); value)
+      {
+        Serial.print(*value, 2);
+        Serial.print("°C, ");
+      }
+      else{
+        Serial.print("--- ");
+      }   
       Serial.print(t->title);
       Serial.println();
   }
 }
-
-String get_uptime_string();
 
 void loop() 
 {
@@ -57,23 +66,5 @@ void loop()
   {
     check_temperature(t);
   }
-}
-
-// Функция возвращает время работы в формате HH:MM:SS
-String get_uptime_string() {
-  unsigned long currentMillis = millis();
-  
-  // Вычисляем время в секундах
-  unsigned long totalSeconds = currentMillis / 1000;
-  
-  // Вычисляем часы, минуты, секунды
-  unsigned long hours = totalSeconds / 3600;
-  unsigned long minutes = (totalSeconds % 3600) / 60;
-  unsigned long seconds = totalSeconds % 60;
-  
-  // Форматируем строку с ведущими нулями
-  char buffer[10];
-  snprintf(buffer, sizeof(buffer), "%02lu:%02lu:%02lu", hours, minutes, seconds);
-  
-  return String(buffer);
+//  delay(1000);
 }

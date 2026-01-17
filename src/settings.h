@@ -17,4 +17,6 @@ namespace settings
             Serial.println("========================");
         }            
     };
+
+    String get_uptime_string();
 }// settings
