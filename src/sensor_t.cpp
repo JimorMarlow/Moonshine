@@ -17,7 +17,7 @@ bool temperature_sensor_t::tick()
     switch(sensor.tick())
     {
         case DS18_READY:
-            value = sensor.getTemp();
+            value = filter.update(sensor.getTemp());
             return true;
             break;
 
@@ -25,6 +25,7 @@ bool temperature_sensor_t::tick()
             if(value)
             {
                 value.reset();
+                filter.reset();
                 return true;
             }
             break; 

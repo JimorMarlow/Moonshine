@@ -27,15 +27,27 @@ etl::vector<etl::shared_ptr<temperature_sensor_t>> t_sensors
   t_top_column, t_deflegmator_water_out, t_condenser_water_out, t_heater_tank
 };
 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
+
 void setup() {
     Serial.begin(115200);
     if(SERIAL_INIT_DELAY > 0) delay(SERIAL_INIT_DELAY);  // для ESP32 C3 supermini нуждо сделать задержку, чтобы выводилась отладочная информация
     
+    // Display
+    lcd.init();
+    lcd.backlight();
+    lcd.setCursor(0, 0);
+    lcd.printf("Moonshine v%s", String(MS_VERSION_STRING).c_str());
+    delay(1000);
+    lcd.clear();
+
     Serial.printf("Moonshine v%s started...\n", String(MS_VERSION_STRING).c_str());
     // установка разрешения температурных датчиков. Влияет на период опроса
     for(auto t : t_sensors)
     {
-      Serial.printf("Init %s (%s)... %s\n", t->name.c_str(), t->title.c_str(), t->init() ? "OK" : "ERROR");
+      String is_init = t->init() ? "OK" : "FAIL";
+      Serial.printf("Init %s (%s)... %s\n", t->name.c_str(), t->title.c_str(), is_init);
     }
 }
 
@@ -43,7 +55,8 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
 {
   if (t->tick()) 
   {
-      Serial.print(settings::get_uptime_string());
+      String uptime = settings::get_uptime_string();
+      Serial.print(uptime);
       Serial.print(" ");
       Serial.print(t->name);
       Serial.print(": ");
@@ -53,10 +66,31 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
         Serial.print("°C, ");
       }
       else{
-        Serial.print("--- ");
+        Serial.print("---    ");
       }   
       Serial.print(t->title);
       Serial.println();
+
+      // Uptime
+      lcd.setCursor(12, 3);
+      lcd.print(uptime);
+
+      int y = 0;
+      for(auto s : t_sensors)
+      {
+        if(s->name == t->name) break;
+        y++;
+      }
+      lcd.setCursor(0, y);
+      lcd.print(t->name); lcd.print(":");
+      if(auto value = t->temperature(); value)
+      {
+        lcd.print(*value, 1);
+        lcd.print("C  ");
+      }
+      else{
+        lcd.print("---    ");
+      }   
   }
 }
 
