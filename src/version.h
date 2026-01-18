@@ -7,7 +7,7 @@
 
 #define MS_VERSION_MAJOR 0
 #define MS_VERSION_MINOR 0
-#define MS_VERSION_PATCH 4
+#define MS_VERSION_PATCH 5
 
 // Хелпер для stringify
 #define MS_STRINGIFY_HELPER(x) #x

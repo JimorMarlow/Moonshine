@@ -30,6 +30,11 @@ etl::vector<etl::shared_ptr<temperature_sensor_t>> t_sensors
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 
+#include "EncButton.h"
+Button btn(TOUCH_BTN_PIN);
+volatile int btn_clicks = 0;  // для проверки нажатий кнопки
+
+///////////////////////////////////////////
 void setup() {
     Serial.begin(115200);
     if(SERIAL_INIT_DELAY > 0) delay(SERIAL_INIT_DELAY);  // для ESP32 C3 supermini нуждо сделать задержку, чтобы выводилась отладочная информация
@@ -47,7 +52,7 @@ void setup() {
     for(auto t : t_sensors)
     {
       String is_init = t->init() ? "OK" : "FAIL";
-      Serial.printf("Init %s (%s)... %s\n", t->name.c_str(), t->title.c_str(), is_init);
+      Serial.printf("Init %s (%s)... %s\n", t->name.c_str(), t->title.c_str(), is_init.c_str());
     }
 }
 
@@ -72,8 +77,13 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
       Serial.println();
 
       // Uptime
-      lcd.setCursor(12, 3);
-      lcd.print(uptime);
+      static String last_uptime = "";// оптимизация вывода времени
+      if(last_uptime != uptime)
+      {
+        lcd.setCursor(12, 3);
+        lcd.print(uptime);
+        last_uptime = uptime;
+      }
 
       int y = 0;
       for(auto s : t_sensors)
@@ -100,5 +110,13 @@ void loop()
   {
     check_temperature(t);
   }
-//  delay(1000);
+
+  btn.tick();
+  if(btn.click())
+  {
+    // Напечатать количество нажатий на кнопки
+    int count = ++btn_clicks;
+    lcd.setCursor(15,0);
+    lcd.print(count);
+  }
 }
