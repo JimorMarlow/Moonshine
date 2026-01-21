@@ -103,6 +103,12 @@ https://github.com/GyverLibs/GyverDS18
 ### Принципиальная схема подключения DS18B20 к ESP8266
 https://microkontroller.ru/esp8266-projects/podklyuchenie-datchika-temperatury-ds18b20-k-esp8266/
 
+### Controlling Steam Valve with Arduino and Stepper Motor
+https://arduinoexpert.com/controlling-steam-valve-with-arduino-and-stepper-motor/
+- ➤ Stepper Motor to DRV8825
+- ➤ DRV8825  
+- ➤ 12V Power Supply:
+
 ### Version
 #### 0.0.1
 Добавил основу проекта, настроил библиотеки
