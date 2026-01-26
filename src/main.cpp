@@ -27,11 +27,36 @@ etl::vector<etl::shared_ptr<temperature_sensor_t>> t_sensors
   t_top_column, t_deflegmator_water_out, t_condenser_water_out, t_heater_tank
 };
 
+// Датчики потока воды
+#include "sensor_flow.h"
+// Поток воды на выходе из дефлегматора. Нужен для контроля температуры по расходу воды
+etl::shared_ptr<flow_sensor_t> flow_deflegmator = etl::make_shared<flow_sensor_t>("D", "flow_deflegmator", F_DEFLEGMATOR_WATER_PIN); 
+// Поток воды на выходе из охладителя (конденсатора/холодильника). Нужен для контроля температуры по расходу воды
+etl::shared_ptr<flow_sensor_t> flow_condenser = etl::make_shared<flow_sensor_t>("C", "flow_condenser", F_CONDENSER_WATER_PIN); 
+etl::vector<etl::shared_ptr<flow_sensor_t>> f_sensors  
+{
+  flow_deflegmator, flow_condenser
+};
+
+// ===== ОБРАБОТЧИК ПРЕРЫВАНИЙ =====
+void IRAM_ATTR pulse_counter_D() {
+    if(auto def = flow_deflegmator; def) {
+      def->pulse();
+    }
+}
+void IRAM_ATTR pulse_counter_C() {
+    if(auto con = flow_condenser; con) {
+      con->pulse();
+    }
+}
+///////////////////////////////////
+
+// Дисплей LED 2004 
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 
 #include "EncButton.h"
-Button btn(TOUCH_BTN_PIN);
+etl::shared_ptr<Button> btn = etl::make_shared<Button>(TOUCH_BTN_PIN);
 volatile int btn_clicks = 0;  // для проверки нажатий кнопки
 
 ///////////////////////////////////////////
@@ -47,34 +72,50 @@ void setup() {
     delay(1000);
     lcd.clear();
 
-    Serial.printf("Moonshine v%s started...\n", String(MS_VERSION_STRING).c_str());
+    Serial.printf("\nMoonshine v%s started...\n", String(MS_VERSION_STRING).c_str());
     // установка разрешения температурных датчиков. Влияет на период опроса
     for(auto t : t_sensors)
     {
-      String is_init = t->init() ? "OK" : "FAIL";
-      Serial.printf("Init %s (%s)... %s\n", t->name.c_str(), t->title.c_str(), is_init.c_str());
+      if(t)
+      {
+        Serial.printf("Init %s (%s)... ", t->name.c_str(), t->title.c_str());
+        String is_init = t->init() ? "OK" : "FAIL";
+        Serial.println(is_init.c_str());
+      }
     }
-}
+
+    // Настройка датчиков холла для измерения потока воды
+    if(flow_deflegmator && flow_deflegmator->init(flow_deflegmator)) {
+      attachInterrupt(digitalPinToInterrupt(flow_deflegmator->pin), pulse_counter_D, FALLING);
+    }
+
+    if(flow_condenser && flow_condenser->init(flow_condenser)) {
+      attachInterrupt(digitalPinToInterrupt(flow_condenser->pin), pulse_counter_C, FALLING);
+    }
+
+    // Button
+   // pinMode(TOUCH_BTN_PIN, INPUT_PULLUP); // Кнопка подключена на  GND - BTN - GPIO
+  }
 
 void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
 {
   if (t->tick()) 
   {
       String uptime = settings::get_uptime_string();
-      Serial.print(uptime);
-      Serial.print(" ");
-      Serial.print(t->name);
-      Serial.print(": ");
-      if(auto value = t->temperature(); value)
-      {
-        Serial.print(*value, 2);
-        Serial.print("°C, ");
-      }
-      else{
-        Serial.print("---    ");
-      }   
-      Serial.print(t->title);
-      Serial.println();
+      // Serial.print(uptime);
+      // Serial.print(" ");
+      // Serial.print(t->name);
+      // Serial.print(": ");
+      // if(auto value = t->temperature(); value)
+      // {
+      //   Serial.print(*value, 2);
+      //   Serial.print("°C, ");
+      // }
+      // else{
+      //   Serial.print("---    ");
+      // }   
+      // Serial.print(t->title);
+      // Serial.println();
 
       // Uptime
       static String last_uptime = "";// оптимизация вывода времени
@@ -104,19 +145,52 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
   }
 }
 
+void check_flow(etl::shared_ptr<flow_sensor_t> f)
+{
+  if (f && f->tick()) 
+  {
+    int y = 1;
+    for(auto s : f_sensors)
+    {
+      if(s->name == f->name) break;
+      y++;
+    }
+    lcd.setCursor(9, y);
+    lcd.print(f->get_spinner_state());
+    if(f->is_calibrate())
+    {
+      if(auto r = f->get_calibrate(); r) {
+        lcd.setCursor(10, y);
+        lcd.print(f->format_calibrate_data(r));
+      }
+    }
+  }
+}
+
 void loop() 
 {
-  for(auto t : t_sensors)
-  {
+  for(auto t : t_sensors){
     check_temperature(t);
   }
 
-  btn.tick();
-  if(btn.click())
+  for(auto f : f_sensors){
+    check_flow(f);
+  }
+
+  if(btn && btn->tick())
   {
-    // Напечатать количество нажатий на кнопки
-    int count = ++btn_clicks;
-    lcd.setCursor(15,0);
-    lcd.print(count);
+    //Serial.println("Button tick");
+    if(btn->click())
+    {
+      // Напечатать количество нажатий на кнопки
+      Serial.println("Button click");
+      int count = ++btn_clicks;
+      lcd.setCursor(15,0);
+      lcd.print(count);
+
+      for(auto f : f_sensors){
+        f->set_calibrate(!f->is_calibrate());
+      }
+    }
   }
 }
