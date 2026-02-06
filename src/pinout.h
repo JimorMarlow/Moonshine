@@ -14,8 +14,8 @@ D8 GPIO15 — LOW (GND),
 D0 GPIO16 — HIGH при старте.​
 
 для дисплея заняты входы SDL, SDA
-D1	5		✓	I2C SCL
-D2	4		✓	I2C SDA
+D1	GPIO5		✓	I2C SCL
+D2	GPIO4		✓	I2C SDA
 
 Все GPIO ESP8266 (NodeMCU), кроме GPIO16 (D0), 
 поддерживают внешние прерывания через attachInterrupt. 
@@ -31,6 +31,6 @@ const int T_CONDENSER_WATER_OUT_PIN = D7;   // - D7 GPIO13 t_condenser_water_out
 const int T_TOP_COLUMN_PIN = D4;            // - D4 GPIO02 t_top_column
 
 const int F_DEFLEGMATOR_WATER_PIN = 10;     // - S3 GPIO10 flow_deflegmator_water
-const int F_CONDENSER_WATER_PIN = 3;      // RX -  flow_condenser_water
+const int F_CONDENSER_WATER_PIN = 3;        // RX GPIO3 -  flow_condenser_water
 
-const int TOUCH_BTN_PIN = D3;             // - D8 GPIO15 touch_btn
+const int TOUCH_BTN_PIN = D3;               // - D3 GPIO0 touch_btn
