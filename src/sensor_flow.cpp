@@ -51,7 +51,8 @@ char flow_sensor_t::get_spinner_char(int counter)
     static const char _spinner[] = {' ', '-', '/', '|', '+', 'X'}; 
     static const etl::array _spinner_chars {_spinner};
     // Используем остаток от деления для циклического выбора символа
-    return _spinner_chars[counter % _spinner_chars.size()];
+    // upd. уменьшил на порядок для большей плавности анимации
+    return _spinner_chars[(counter/10) % _spinner_chars.size()];
 }
 
 String flow_sensor_t::get_spinner_state() // текущее состояние спиннера

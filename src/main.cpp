@@ -137,7 +137,7 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
       if(auto value = t->temperature(); value)
       {
         lcd.print(*value, 1);
-        lcd.print("C  ");
+        lcd.print("c  ");
       }
       else{
         lcd.print("---    ");
