@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Moonshine - Monitoring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .main-panel {
+            display: grid;
+            grid-template-columns: 1fr 240px;
+            gap: 5px;
+        }
+
+        .scheme-container {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sensors-panel {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+            height: fit-content;
+        }
+
+        .distillation-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Components - Minimalist style */
+        .heater {
+            fill: #ffffff;
+            stroke-width: 2.5;
+        }
+
+        .heater-liquid {
+            fill: #3498db;
+            opacity: 0.3;
+        }
+
+        /* Column: No border, just gradient */
+        .column {
+            stroke: none;
+        }
+
+        .deflegmator {
+            fill: #ffffff;
+            stroke: #27ae60;
+            stroke-width: 2.5;
+        }
+
+        .condenser {
+            fill: #ffffff;
+            stroke: #3498db;
+            stroke-width: 2.5;
+        }
+
+        .pipe {
+            fill: none;
+            stroke: #95a5a6;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+
+        /* Vapor Pipe: Thicker (12px), rounded joins */
+        .vapor-pipe {
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .water-pipe-in {
+            stroke: #3498db;
+            stroke-width: 4;
+        }
+
+        .water-pipe-out {
+            stroke-width: 4;
+        }
+
+        .product-pipe {
+            stroke: #95a5a6; /* Gray */
+            stroke-width: 5;
+        }
+
+        /* Temperature display rectangles */
+        .temp-rect {
+            fill: #ffffff;
+            stroke: #f39c12;
+            stroke-width: 1;
+        }
+
+        /* Flow value display rectangles */
+        .flow-value-rect {
+            fill: #ffffff;
+            stroke: #1abc9c;
+            stroke-width: 1;
+        }
+
+        /* Combined temperature text style */
+        .temp-text, .flow-text {
+            font-size: 24px;
+            font-weight: 300;
+            fill: #2c3e50;
+            text-anchor: middle;
+            font-family: 'Courier New', monospace;
+            dominant-baseline: middle;
+        }
+        
+        .flow-unit-text {
+            font-size: 12px;
+            font-weight: 500;
+            fill: #7f8c8d;
+            text-anchor: middle;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            dominant-baseline: middle;
+        }
+
+        .temp-label {
+            font-size: 14px;
+            fill: #7f8c8d;
+            text-anchor: middle;
+            font-weight: 500;
+        }
+
+        /* Flow sensors with rotating wheels */
+        .sensor-flow-rect {
+            fill: #1abc9c;
+            stroke: #16a085;
+            stroke-width: 2;
+            cursor: pointer;
+        }
+
+        .flow-wheel-group {
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+
+        .flow-wheel-slow {
+            animation: rotate 3s linear infinite;
+        }
+
+        .flow-wheel-medium {
+            animation: rotate 1.5s linear infinite;
+        }
+
+        .flow-wheel-fast {
+            animation: rotate 0.7s linear infinite;
+        }
+
+        .flow-wheel {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 2;
+        }
+        
+        .flow-wheel-line {
+            stroke: #ffffff;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        /* Warning Icon */
+        .warning-icon {
+            display: none;
+        }
+        
+        .warning-icon path {
+            fill: #f1c40f;
+            stroke: #d35400;
+            stroke-width: 1;
+        }
+        
+        .warning-icon text, .warning-icon circle {
+            fill: #2c3e50;
+            font-weight: 900;
+            font-family: sans-serif;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Flow animation */
+        .flow-slow {
+            stroke-dasharray: 10, 10;
+            animation: flowAnimation 2s linear infinite;
+        }
+
+        .flow-medium {
+            stroke-dasharray: 8, 8;
+            animation: flowAnimation 1s linear infinite;
+        }
+
+        .flow-fast {
+            stroke-dasharray: 5, 5;
+            animation: flowAnimation 0.5s linear infinite;
+        }
+
+        @keyframes flowAnimation {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        /* Drop Animation */
+        .drop-blink-1hz {
+            animation: blink 1s infinite;
+        }
+        .drop-blink-2hz {
+            animation: blink 0.5s infinite;
+        }
+        .drop-blink-4hz {
+            animation: blink 0.25s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        /* Bubble Animation */
+        .bubble {
+            fill: #3498db;
+            opacity: 0.6;
+            transform-box: fill-box;
+            transform-origin: center bottom;
+            animation: rise linear infinite;
+        }
+
+        /* Bubble Speed Gradations */
+        .bubble-speed-1 { animation-duration: 5s; } /* 60-65 */
+        .bubble-speed-2 { animation-duration: 4s; } /* 65-70 */
+        .bubble-speed-3 { animation-duration: 3s; } /* 70-75 */
+        .bubble-speed-4 { animation-duration: 2s; } /* 75-80 */
+        .bubble-speed-5 { animation-duration: 1.5s; } /* 80-85 */
+        .bubble-speed-6 { animation-duration: 1s; } /* 85-90 */
+        .bubble-speed-7 { animation-duration: 0.5s; } /* >90 */
+
+        @keyframes rise {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(-60px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* Sensor Cards - Minimalist */
+        .sensor-card {
+            background: #fafafa;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            transition: all 0.3s;
+        }
+
+        .sensor-card:hover {
+            background: #f0f0f0;
+        }
+
+        .temp-sensor {
+            border-left-color: #f39c12;
+        }
+
+        .flow-sensor {
+            border-left-color: #1abc9c;
+        }
+
+        .sensor-title {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 6px;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        .temp-display {
+            display: flex;
+            align-items: baseline;
+            justify-content: flex-start;
+        }
+
+        .temp-value {
+            font-size: 28px;
+            font-weight: 300;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+            line-height: 1;
+        }
+
+        .temp-unit {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-left: 4px;
+        }
+
+        .flow-value {
+            font-size: 24px;
+            font-weight: 300;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+        }
+
+        .flow-unit {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-left: 4px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #ecf0f1;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .status-text {
+            font-size: 11px;
+            color: #27ae60;
+            margin-top: 10px;
+        }
+
+        .update-time {
+            font-size: 10px;
+            color: #95a5a6;
+            margin-top: 6px;
+        }
+        
+        /* Internal Header */
+        .internal-header {
+            text-align: center;
+            padding: 5px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ecf0f1;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        /* Status Messages */
+        .status-bar {
+            padding: 8px;
+            margin: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            border: 1px solid;
+        }
+
+        .status-ok {
+            background: #d5f5e3;
+            color: #27ae60;
+            border-color: #27ae60;
+        }
+
+        .status-warning {
+            background: #fef9e7;
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+
+        .status-error {
+            background: #fdedec;
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        @media (max-width: 900px) {
+            .main-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-panel">
+            <div class="scheme-container">
+                <div class="internal-header">Moonshine v.1.0.15</div>
+                <div id="statusBar" class="status-bar status-ok">✓ Система работает нормально</div>
+                <svg class="distillation-svg" viewBox="0 0 700 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <!-- Dynamic Gradients -->
+                        <linearGradient id="columnGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stop-color="#e74c3c" id="colStopLow"/>
+                            <stop offset="100%" stop-color="#f39c12" id="colStopHigh"/>
+                        </linearGradient>
+                        <linearGradient id="vaporGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#e67e22" id="vapStopLow"/>
+                            <stop offset="100%" stop-color="#3498db" id="vapStopHigh"/>
+                        </linearGradient>
+                        
+                        <!-- Warning Icon Definition: Taller Triangle -->
+                        <g id="warningSymbol">
+                            <!-- Triangle: Taller to fit text -->
+                            <path d="M 0,-11 L 9,6 L -9,6 Z" fill="#f1c40f" stroke="#d35400" stroke-width="1"/>
+                            <!-- Exclamation Mark: Adjusted position -->
+                            <path d="M 0,-5 L 0,1" stroke="#2c3e50" stroke-width="2.5" stroke-linecap="round"/>
+                            <circle cx="0" cy="4" r="1.2" fill="#2c3e50"/>
+                        </g>
+
+                        <!-- Drop Shape -->
+                        <path id="dropShape" d="M 0,0 Q -4,-4 0,-10 Q 4,-4 0,0" fill="#3498db" opacity="0.8"/>
+                    </defs>
+
+                    <!-- COLUMN (Колонна) - MOVED TO BACK (Before Heater) -->
+                    <rect x="315" y="300" width="30" height="150" class="column" fill="url(#columnGradient)" id="column"/>
+                    
+                    <!-- HEATER (Нагревательный бак) - MOVED TO FRONT OF COLUMN -->
+                    <rect x="270" y="450" width="120" height="80" rx="5" class="heater" id="heater"/>
+                    
+                    <!-- Liquid Level (80%) -->
+                    <!-- Heater Y=450, Height=80. 80% = 64px height. Top = 450 + (80-64) = 466 -->
+                    <rect x="272" y="466" width="116" height="62" rx="3" class="heater-liquid" id="heaterLiquid"/>
+                    
+                    <!-- Bubbles Group (Increased count) -->
+                    <g id="heaterBubbles">
+                        <circle cx="285" cy="520" r="2" class="bubble bubble-speed-1" style="animation-delay: 0s;"/>
+                        <circle cx="305" cy="515" r="2.5" class="bubble bubble-speed-1" style="animation-delay: 1.2s;"/>
+                        <circle cx="325" cy="525" r="2" class="bubble bubble-speed-1" style="animation-delay: 2.4s;"/>
+                        <circle cx="345" cy="510" r="2.5" class="bubble bubble-speed-1" style="animation-delay: 0.6s;"/>
+                        <circle cx="365" cy="520" r="2" class="bubble bubble-speed-1" style="animation-delay: 3.0s;"/>
+                        <circle cx="295" cy="505" r="1.8" class="bubble bubble-speed-1" style="animation-delay: 1.8s;"/>
+                        <circle cx="315" cy="500" r="2.2" class="bubble bubble-speed-1" style="animation-delay: 3.6s;"/>
+                        <circle cx="335" cy="508" r="1.8" class="bubble bubble-speed-1" style="animation-delay: 0.9s;"/>
+                    </g>
+
+                    <text x="330" y="502" text-anchor="middle" fill="#2c3e50" font-size="14" font-weight="500">Heater</text>
+                    
+                    <!-- Temperature display for Heater (Moved down 2px) -->
+                    <rect x="290" y="454" width="85" height="32" rx="3" class="temp-rect" id="rectHeater"/>
+                    <text x="332.5" y="470" class="temp-text" id="valueHeaterNum">78.5°</text>
+                    
+                    <!-- Heating element -->
+                    <rect x="300" y="505" width="60" height="12" rx="3" fill="#e74c3c" opacity="0.3"/>
+                    
+                    <!-- Temperature display for Steam -->
+                    <rect x="290" y="137" width="85" height="32" rx="3" class="temp-rect" id="rectSteam"/>
+                    <text x="332.5" y="153" class="temp-text" id="valueSteamNum">78.2°</text>
+                    <text x="330" y="132" text-anchor="middle" class="temp-label">Steam</text>
+
+                    <!-- PIPES (Moved BEFORE equipment to be behind them) -->
+                    
+                    <!-- 180 degree turn pipe (Vapor) - Thicker, Rounded -->
+                    <path d="M 330 210 L 330 180 L 420 180 L 420 210" class="vapor-pipe" stroke="url(#vaporGradient)" fill="none"/>
+
+                    <!-- Product output (Moved before Condenser body) -->
+                    <path d="M 420 300 L 420 340" class="product-pipe" id="productPipe"/>
+                    <text x="420" y="355" text-anchor="middle" fill="#7f8c8d" font-size="10">Product</text>
+                    <!-- Drop Indicator -->
+                    <g id="dropIndicator" transform="translate(420, 370)" style="display: none;">
+                        <use href="#dropShape"/>
+                    </g>
+
+                    <!-- DEFLEGMATOR (Дефлегматор) -->
+                    <rect x="290" y="210" width="80" height="90" rx="5" class="deflegmator" id="deflegmator"/>
+                    <text x="330" y="255" text-anchor="middle" fill="#2c3e50" font-size="10">Deflegmator</text>
+                    
+                    <!-- Inner tube for deflegmator -->
+                    <rect x="315" y="220" width="30" height="70" rx="3" fill="#27ae60" opacity="0.2"/>
+                    
+                    <!-- CONDENSER (Конденсер) -->
+                    <rect x="380" y="210" width="80" height="90" rx="5" class="condenser" id="condenser"/>
+                    <text x="420" y="255" text-anchor="middle" fill="#2c3e50" font-size="10">Condenser</text>
+                    
+                    <!-- Inner tube for condenser -->
+                    <rect x="405" y="220" width="30" height="70" rx="3" fill="#3498db" opacity="0.2"/>
+                    
+                    <!-- Water pipes for deflegmator -->
+                    <!-- Input -->
+                    <path d="M 280 290 L 315 290 L 315 265 L 330 265" class="pipe water-pipe-in" id="dfWaterInPipe"/>
+                    <!-- Output: Center (330) -> Horizontal to Box Center X (237.5) -> Vertical Up to Box Bottom (237) -->
+                    <path d="M 330 235 L 237.5 235 L 237.5 217" class="pipe water-pipe-out" id="dfWaterOutPipe"/>
+
+                    <!-- Water pipes for condenser -->
+                    <!-- Input -->
+                    <path d="M 470 290 L 435 290 L 435 265 L 420 265" class="pipe water-pipe-in" id="coolWaterInPipe"/>
+                    <!-- Output: Center (420) -> Horizontal to Box Center X (512.5) -> Vertical Up to Box Bottom (237) -->
+                    <path d="M 420 235 L 512.5 235 L 512.5 217" class="pipe water-pipe-out" id="coolWaterOutPipe"/>
+
+                    <!-- FLOW SENSORS with rotating wheels -->
+                    <!-- DF.Flow -->
+                    <g id="sensorDFFlow">
+                        <rect x="250" y="280" width="30" height="20" rx="3" class="sensor-flow-rect"/>
+                        <!-- Wheel Group -->
+                        <g class="flow-wheel-group" id="wheelDFGroup">
+                            <circle cx="265" cy="290" r="6" class="flow-wheel"/>
+                            <line x1="265" y1="284" x2="265" y2="296" class="flow-wheel-line"/>
+                            <line x1="259" y1="290" x2="271" y2="290" class="flow-wheel-line"/>
+                        </g>
+                        <!-- Warning Icon Group (Moved down 2px: 310 -> 312) -->
+                        <g id="warningDF" class="warning-icon" transform="translate(265, 292)">
+                            <use href="#warningSymbol"/>
+                        </g>
+                        
+                        <!-- Flow Value Display -->
+                        <rect x="225" y="307" width="80" height="38" rx="3" class="flow-value-rect"/>
+                        <text x="265" y="322" class="flow-text" id="svgValueDFFlow">250</text>
+                        <text x="265" y="338" class="flow-unit-text">ml/min</text>
+                    </g>
+
+                    <!-- Cool.Flow -->
+                    <g id="sensorCoolFlow">
+                        <rect x="470" y="280" width="30" height="20" rx="3" class="sensor-flow-rect"/>
+                        <!-- Wheel Group -->
+                        <g class="flow-wheel-group" id="wheelCoolGroup">
+                            <circle cx="485" cy="290" r="6" class="flow-wheel"/>
+                            <line x1="485" y1="284" x2="485" y2="296" class="flow-wheel-line"/>
+                            <line x1="479" y1="290" x2="491" y2="290" class="flow-wheel-line"/>
+                        </g>
+                        <!-- Warning Icon Group (Moved down 2px: 310 -> 312) -->
+                        <g id="warningCool" class="warning-icon" transform="translate(485, 292)">
+                            <use href="#warningSymbol"/>
+                        </g>
+
+                        <!-- Flow Value Display -->
+                        <rect x="445" y="307" width="80" height="38" rx="3" class="flow-value-rect"/>
+                        <text x="485" y="322" class="flow-text" id="svgValueCoolFlow">180</text>
+                        <text x="485" y="338" class="flow-unit-text">ml/min</text>
+                    </g>
+
+                    <!-- Temperature displays on output pipes -->
+                    <!-- DF.T -->
+                    <rect x="195" y="185" width="85" height="32" rx="3" class="temp-rect" id="rectDFT"/>
+                    <text x="237.5" y="201" class="temp-text" id="valueDFTNum">28.3°</text>
+                    
+                    <!-- Cool.T -->
+                    <rect x="470" y="185" width="85" height="32" rx="3" class="temp-rect" id="rectCoolT"/>
+                    <text x="512.5" y="201" class="temp-text" id="valueCoolTNum">22.1°</text>
+                </svg>
+            </div>
+            
+            <div class="sensors-panel">
+                <div class="section-title">Температура</div>
+                
+                <!-- Reordered: Steam, DF, Cool, Heater -->
+                <div class="sensor-card temp-sensor">
+                    <div class="sensor-title">Steam - Верх колонны</div>
+                    <div class="temp-display">
+                        <div class="temp-value" id="cardValueSteam">78.2</div>
+                        <div class="temp-unit">°C</div>
+                    </div>
+                </div>
+                
+                <div class="sensor-card temp-sensor">
+                    <div class="sensor-title">DF.T - Дефлегматор (выход)</div>
+                    <div class="temp-display">
+                        <div class="temp-value" id="cardValueDFT">28.3</div>
+                        <div class="temp-unit">°C</div>
+                    </div>
+                </div>
+                
+                <div class="sensor-card temp-sensor">
+                    <div class="sensor-title">Cool.T - Конденсер (выход)</div>
+                    <div class="temp-display">
+                        <div class="temp-value" id="cardValueCoolT">22.1</div>
+                        <div class="temp-unit">°C</div>
+                    </div>
+                </div>
+
+                <div class="sensor-card temp-sensor">
+                    <div class="sensor-title">Heater - Температура в баке</div>
+                    <div class="temp-display">
+                        <div class="temp-value" id="cardValueHeater">78.5</div>
+                        <div class="temp-unit">°C</div>
+                    </div>
+                </div>
+                
+                <div class="section-title" style="margin-top: 20px;">Поток воды</div>
+                
+                <div class="sensor-card flow-sensor">
+                    <div class="sensor-title">DF.Flow - Дефлегматор</div>
+                    <div style="display: flex; align-items: baseline;">
+                        <div class="flow-value" id="cardValueDFFlow">250</div>
+                        <div class="flow-unit">ml/min</div>
+                    </div>
+                </div>
+                
+                <div class="sensor-card flow-sensor">
+                    <div class="sensor-title">Cool.Flow - Конденсер</div>
+                    <div style="display: flex; align-items: baseline;">
+                        <div class="flow-value" id="cardValueCoolFlow">180</div>
+                        <div class="flow-unit">ml/min</div>
+                    </div>
+                </div>
+                
+                <div class="status-text">✓ Система работает нормально</div>
+                <div class="update-time">Обновлено: <span id="lastUpdate">--:--:--</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulation State
+        const simState = {
+            phase: 'HEAT', // HEAT, OSCILLATE, COOL, PAUSE
+            phaseStartTime: Date.now()
+        };
+
+        // Simulation data container
+        const sensorData = {
+            Heater: { value: 20.0, min: 20, max: 95 },
+            Steam: { value: 20.0, min: 20, max: 95 },
+            DFT: { value: 20.0, min: 15, max: 40 },
+            CoolT: { value: 20.0, min: 15, max: 35 },
+            DFFlow: { value: 0, min: 0, max: 400 },
+            CoolFlow: { value: 0, min: 0, max: 400 }
+        };
+
+        function updateSimulationLogic() {
+            const now = Date.now();
+            const elapsed = (now - simState.phaseStartTime) / 1000; // seconds
+
+            if (simState.phase === 'HEAT') {
+                // Heat from 20 to 80 in 60 seconds
+                sensorData.Heater.value = 20 + (elapsed * 1.0);
+                if (sensorData.Heater.value >= 80) {
+                    sensorData.Heater.value = 80;
+                    simState.phase = 'OSCILLATE';
+                    simState.phaseStartTime = now;
+                }
+            } else if (simState.phase === 'OSCILLATE') {
+                // Oscillate for 30s. Amp=5, Period=10s. Base=80.
+                const oscillation = 5 * Math.sin(2 * Math.PI * (elapsed / 10));
+                sensorData.Heater.value = 80 + oscillation;
+                
+                if (elapsed >= 30) {
+                    simState.phase = 'COOL';
+                    simState.phaseStartTime = now;
+                }
+            } else if (simState.phase === 'COOL') {
+                // Cool from 80 to 20 in 60 seconds
+                sensorData.Heater.value = 80 - (elapsed * 1.0);
+                if (sensorData.Heater.value <= 20) {
+                    sensorData.Heater.value = 20;
+                    simState.phase = 'PAUSE';
+                    simState.phaseStartTime = now;
+                }
+            } else if (simState.phase === 'PAUSE') {
+                // Pause at 20 for 30 seconds
+                sensorData.Heater.value = 20;
+                if (elapsed >= 30) {
+                    simState.phase = 'HEAT';
+                    simState.phaseStartTime = now;
+                }
+            }
+
+            // Steam Logic: Starts after Heater > 65, value = Heater - 5
+            if (sensorData.Heater.value > 65) {
+                sensorData.Steam.value = sensorData.Heater.value - 5;
+            } else {
+                if (sensorData.Steam.value > sensorData.Heater.value - 5) {
+                    sensorData.Steam.value -= 0.5; 
+                }
+                if (sensorData.Steam.value < 20) sensorData.Steam.value = 20;
+            }
+
+            // Flow Logic: On if Heater > 60
+            const flowTarget = sensorData.Heater.value > 60 ? 250 : 0;
+            
+            // Smooth transition for flow
+            if (sensorData.DFFlow.value < flowTarget) sensorData.DFFlow.value += 5;
+            if (sensorData.DFFlow.value > flowTarget) sensorData.DFFlow.value -= 5;
+            
+            // Add noise
+            if (flowTarget > 0) {
+                sensorData.DFFlow.value += (Math.random() - 0.5) * 5;
+                sensorData.CoolFlow.value = sensorData.DFFlow.value + (Math.random() - 0.5) * 5;
+            } else {
+                sensorData.DFFlow.value = 0;
+                sensorData.CoolFlow.value = 0;
+            }
+
+            // Output Temps Logic
+            const steamTemp = sensorData.Steam.value;
+            let targetDFT = 20; 
+            
+            if (steamTemp > 65) {
+                targetDFT = 22 + ((steamTemp - 65) / 15) * 8; 
+            }
+            if (steamTemp > 80) {
+                targetDFT = 30; 
+            }
+            
+            if (sensorData.DFT.value < targetDFT) sensorData.DFT.value += 0.05;
+            if (sensorData.DFT.value > targetDFT) sensorData.DFT.value -= 0.05;
+
+            if (flowTarget > 0) {
+                if (sensorData.CoolT.value < 25) sensorData.CoolT.value += 0.05;
+            } else {
+                if (sensorData.CoolT.value > 20) sensorData.CoolT.value -= 0.2;
+            }
+        }
+
+        // Rules System
+        function checkRules() {
+            const messages = [];
+            const { Heater, CoolFlow, CoolT, DFT, DFFlow } = sensorData;
+
+            // Rule 2: Heater > 55 AND Cool.Flow = 0
+            if (Heater.value > 55 && CoolFlow.value === 0) {
+                messages.push({ type: 'warning', text: 'Включите подачу воды в охладитель' });
+            }
+
+            // Rule 3: Cool.T > 30
+            if (CoolT.value > 30) {
+                if (CoolFlow.value === 0) {
+                    messages.push({ type: 'error', text: 'Нет воды в охладителе!' });
+                } else {
+                    messages.push({ type: 'warning', text: 'Добавьте воды в охладитель' });
+                }
+            }
+
+            // Rule 4: DF.T > 30
+            if (DFT.value > 30) {
+                if (DFFlow.value === 0) {
+                    messages.push({ type: 'error', text: 'Нет воды в дефлегматоре!' });
+                } else {
+                    messages.push({ type: 'warning', text: 'Добавьте воды в дефлегматор' });
+                }
+            }
+
+            // Rule 1: If no errors or warnings
+            if (messages.length === 0) {
+                messages.push({ type: 'ok', text: '✓ Система работает нормально' });
+            }
+
+            return messages;
+        }
+
+        function updateStatusBar() {
+            const messages = checkRules();
+            const statusBar = document.getElementById('statusBar');
+            
+            // Find highest priority message (error > warning > ok)
+            const priority = { error: 3, warning: 2, ok: 1 };
+            const highestPriority = messages.reduce((prev, current) => 
+                priority[current.type] > priority[prev.type] ? current : prev
+            );
+
+            statusBar.className = 'status-bar';
+            statusBar.classList.add(`status-${highestPriority.type}`);
+            statusBar.textContent = highestPriority.text;
+        }
+
+        function getTempColor(temp) {
+            if (temp <= 20) return '#3498db';
+            if (temp <= 25) {
+                const ratio = (temp - 20) / 5;
+                const r = Math.round(52 + ratio * (241 - 52));
+                const g = Math.round(152 + ratio * (196 - 152));
+                const b = Math.round(219 + ratio * (15 - 219));
+                return `rgb(${r},${g},${b})`;
+            }
+            if (temp <= 30) {
+                const ratio = (temp - 25) / 5;
+                const r = Math.round(241 + ratio * (231 - 241));
+                const g = Math.round(196 + ratio * (76 - 196));
+                const b = Math.round(15 + ratio * (60 - 15));
+                return `rgb(${r},${g},${b})`;
+            }
+            return '#e74c3c';
+        }
+
+        function getColumnColors(heaterTemp, steamTemp) {
+            const lowColor = getTempColor(heaterTemp > 30 ? 30 : heaterTemp); 
+            const highColor = getTempColor(steamTemp > 30 ? 30 : steamTemp);
+            return { low: lowColor, high: highColor };
+        }
+
+        function formatTemp(value) {
+            return value.toFixed(1);
+        }
+
+        function getFlowWheelClass(flow) {
+            if (flow < 150) return 'flow-wheel-slow';
+            if (flow < 250) return 'flow-wheel-medium';
+            return 'flow-wheel-fast';
+        }
+
+        function getFlowPipeClass(flow) {
+            if (flow < 150) return 'flow-slow';
+            if (flow < 250) return 'flow-medium';
+            return 'flow-fast';
+        }
+
+        function updateDropIndicator(steamTemp) {
+            const drop = document.getElementById('dropIndicator');
+            if (!drop) return;
+
+            if (steamTemp < 65) {
+                drop.style.display = 'none';
+                drop.classList.remove('drop-blink-1hz', 'drop-blink-2hz', 'drop-blink-4hz');
+            } else {
+                drop.style.display = 'block';
+                drop.classList.remove('drop-blink-1hz', 'drop-blink-2hz', 'drop-blink-4hz');
+                
+                if (steamTemp >= 75) {
+                    drop.classList.add('drop-blink-4hz');
+                } else if (steamTemp >= 70) {
+                    drop.classList.add('drop-blink-2hz');
+                } else {
+                    drop.classList.add('drop-blink-1hz');
+                }
+            }
+        }
+
+        function updateHeaterBubbles(heaterTemp) {
+            const bubbles = document.querySelectorAll('.bubble');
+            if (!bubbles.length) return;
+
+            // Determine speed class based on temperature ranges (60 to 90+)
+            let speedClass = '';
+            
+            if (heaterTemp > 90) speedClass = 'bubble-speed-7';
+            else if (heaterTemp > 85) speedClass = 'bubble-speed-6';
+            else if (heaterTemp > 80) speedClass = 'bubble-speed-5';
+            else if (heaterTemp > 75) speedClass = 'bubble-speed-4';
+            else if (heaterTemp > 70) speedClass = 'bubble-speed-3';
+            else if (heaterTemp > 65) speedClass = 'bubble-speed-2';
+            else if (heaterTemp > 60) speedClass = 'bubble-speed-1';
+            
+            bubbles.forEach(bubble => {
+                // Remove all speed classes
+                bubble.classList.remove('bubble-speed-1', 'bubble-speed-2', 'bubble-speed-3', 
+                                       'bubble-speed-4', 'bubble-speed-5', 'bubble-speed-6', 'bubble-speed-7');
+                
+                if (speedClass) {
+                    bubble.classList.add(speedClass);
+                    bubble.style.display = 'block';
+                } else {
+                    bubble.style.display = 'none';
+                }
+            });
+        }
+
+        function updateSensors() {
+            updateSimulationLogic();
+
+            for (let sensor in sensorData) {
+                const data = sensorData[sensor];
+                
+                data.value = Math.max(data.min, Math.min(data.max, data.value));
+                
+                const numElement = document.getElementById(`value${sensor}Num`);
+                const svgFlowElement = document.getElementById(`svgValue${sensor}`);
+                
+                if (numElement) {
+                    if (!sensor.includes('Flow')) {
+                        numElement.textContent = formatTemp(data.value) + '°';
+                    }
+                }
+
+                if (svgFlowElement) {
+                    svgFlowElement.textContent = data.value.toFixed(0);
+                }
+                
+                const cardElement = document.getElementById(`cardValue${sensor}`);
+                if (cardElement) {
+                    if (sensor.includes('Flow')) {
+                        cardElement.textContent = data.value.toFixed(0);
+                    } else {
+                        cardElement.textContent = formatTemp(data.value);
+                    }
+                }
+
+                // Handle Flow Sensors (Wheel vs Warning)
+                if (sensor.includes('Flow')) {
+                    const isNoFlow = data.value < 10;
+                    const wheelGroup = document.getElementById(sensor === 'DFFlow' ? 'wheelDFGroup' : 'wheelCoolGroup');
+                    const warningIcon = document.getElementById(sensor === 'DFFlow' ? 'warningDF' : 'warningCool');
+                    
+                    if (wheelGroup && warningIcon) {
+                        if (isNoFlow) {
+                            wheelGroup.style.display = 'none';
+                            warningIcon.style.display = 'block';
+                            
+                            const pipeId = sensor === 'DFFlow' ? 'dfWaterInPipe' : 'coolWaterInPipe';
+                            const pipe = document.getElementById(pipeId);
+                            if(pipe) {
+                                pipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                                pipe.style.strokeDasharray = 'none';
+                            }
+                        } else {
+                            wheelGroup.style.display = 'block';
+                            warningIcon.style.display = 'none';
+                            
+                            const pipeId = sensor === 'DFFlow' ? 'dfWaterInPipe' : 'coolWaterInPipe';
+                            const pipe = document.getElementById(pipeId);
+                            if (pipe) {
+                                pipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                                pipe.classList.add(getFlowPipeClass(data.value));
+                                pipe.style.strokeDasharray = ''; 
+                            }
+
+                            if (wheelGroup) {
+                                wheelGroup.classList.remove('flow-wheel-slow', 'flow-wheel-medium', 'flow-wheel-fast');
+                                wheelGroup.classList.add(getFlowWheelClass(data.value));
+                            }
+                        }
+                    }
+                }
+
+                // Update output pipe colors and animations
+                if (sensor === 'DFT') {
+                    const outPipe = document.getElementById('dfWaterOutPipe');
+                    if (outPipe) {
+                        outPipe.style.stroke = getTempColor(data.value);
+                        if (sensorData.DFFlow.value >= 10) {
+                            outPipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                            outPipe.classList.add(getFlowPipeClass(sensorData.DFFlow.value));
+                            outPipe.style.strokeDasharray = ''; 
+                        } else {
+                            outPipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                            outPipe.style.strokeDasharray = 'none';
+                        }
+                    }
+                }
+                
+                if (sensor === 'CoolT') {
+                    const outPipe = document.getElementById('coolWaterOutPipe');
+                    if (outPipe) {
+                        outPipe.style.stroke = getTempColor(data.value);
+                        if (sensorData.CoolFlow.value >= 10) {
+                            outPipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                            outPipe.classList.add(getFlowPipeClass(sensorData.CoolFlow.value));
+                            outPipe.style.strokeDasharray = ''; 
+                        } else {
+                            outPipe.classList.remove('flow-slow', 'flow-medium', 'flow-fast');
+                            outPipe.style.strokeDasharray = 'none';
+                        }
+                    }
+                }
+            }
+
+            // Update Gradients
+            const colColors = getColumnColors(sensorData.Heater.value, sensorData.Steam.value);
+            document.getElementById('colStopLow').setAttribute('stop-color', colColors.low);
+            document.getElementById('colStopHigh').setAttribute('stop-color', colColors.high);
+
+            const steamColor = getTempColor(sensorData.Steam.value > 30 ? 30 : sensorData.Steam.value); 
+            const coolColor = getTempColor(sensorData.CoolT.value);
+            
+            document.getElementById('vapStopLow').setAttribute('stop-color', steamColor);
+            document.getElementById('vapStopHigh').setAttribute('stop-color', coolColor);
+
+            // Update Heater Border Color
+            const heaterElement = document.getElementById('heater');
+            if (heaterElement) {
+                heaterElement.style.stroke = getTempColor(sensorData.Heater.value);
+            }
+
+            // Update Drop Indicator
+            updateDropIndicator(sensorData.Steam.value);
+
+            // Update Heater Bubbles
+            updateHeaterBubbles(sensorData.Heater.value);
+
+            // Update Status Bar (Rules)
+            updateStatusBar();
+            
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ru-RU');
+        }
+
+        updateSensors();
+        setInterval(updateSensors, 100); 
+    </script>
+</body>
+</html>
