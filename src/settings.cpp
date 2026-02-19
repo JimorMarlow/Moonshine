@@ -2,6 +2,9 @@
 
 namespace settings
 {
+namespace moonshine 
+{
+
     // Функция возвращает время работы в формате HH:MM:SS
 String get_uptime_string() {
   unsigned long currentMillis = millis();
@@ -15,9 +18,11 @@ String get_uptime_string() {
   unsigned long seconds = totalSeconds % 60;
   
   // Форматируем строку с ведущими нулями
-  char buffer[10];
+  char buffer[16]; // с запасом, чтобы не было предупреждений
   snprintf(buffer, sizeof(buffer), "%02lu:%02lu:%02lu", hours, minutes, seconds);
   
   return String(buffer);
 }
+
+}// moonshine
 }// settings

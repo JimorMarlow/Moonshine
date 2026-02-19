@@ -271,3 +271,6 @@ https://ali.click/ktwszq
 #### 1.0.31 Добавил макет web-ui с помощью qwen 3.5
 Инструкция по установке docs\qwen_install.md
 
+#### 1.1.1 settings::moonshine::state_t
+Начал оборачивать все данные в нормальные структуры...
+

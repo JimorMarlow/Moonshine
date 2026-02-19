@@ -101,7 +101,7 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
 {
   if (t->tick()) 
   {
-      String uptime = settings::get_uptime_string();
+      String uptime = settings::moonshine::get_uptime_string();
       // Serial.print(uptime);
       // Serial.print(" ");
       // Serial.print(t->name);
