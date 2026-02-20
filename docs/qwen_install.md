@@ -46,6 +46,28 @@
 
 ---
 
+### Шаг 2.1: Установка qwen code для командной строки
+Install Qwen Code:
+
+NPM(recommended) (Win11)
+```powershell
+npm install -g @qwen-code/qwen-code@latest
+```
+
+Homebrew(macOS, Linux)
+```bash
+brew install qwen-code
+```
+
+Start using Qwen Code:
+```
+cd your-project
+qwen
+```
+Select Qwen OAuth (Free) authentication and follow the prompts to log in. Then let’s start with understanding your codebase.
+
+---
+
 ### Шаг 2: Установка VS Code
 
 1. Перейдите на [code.visualstudio.com](https://code.visualstudio.com/)
