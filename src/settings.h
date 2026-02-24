@@ -10,6 +10,7 @@ namespace moonshine
     const uint16_t temperature_update_delay = 500;  // 500ms
     struct state_t
     {
+        uint32_t             uptime_ms = 0;                // Время от начала работы
         etl::optional<float> steam_temperature = 0.0;      // Температура °C пара в верхней части колонных
         etl::optional<float> heater_temperature = 0.0;     // Температура °C в нагревательном баке
         etl::optional<float> deflegmater_temperature = 0.0;// Температура °C воды на выходе дефлегматора
@@ -20,6 +21,7 @@ namespace moonshine
 
         void trace() {
             Serial.println("=== settings::moonshine::state_t ===");
+            Serial.printf("uptime_ms = %d\n", uptime_ms);
             Serial.printf("steam_temperature = %s\n", steam_temperature ? String(*steam_temperature).c_str() : "---");
             Serial.printf("heater_temperature = %s\n", heater_temperature ? String(*heater_temperature).c_str() : "---");
             Serial.printf("deflegmater_temperature = %s\n", deflegmater_temperature ? String(*deflegmater_temperature).c_str() : "---");
