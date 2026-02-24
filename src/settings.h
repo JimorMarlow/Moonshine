@@ -33,5 +33,6 @@ namespace moonshine
     };
 
     String get_uptime_string();
+    String format_uptime_string(unsigned long uptime_ms);
 }// moonshine
 }// settings

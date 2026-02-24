@@ -7,10 +7,13 @@ namespace moonshine
 
     // Функция возвращает время работы в формате HH:MM:SS
 String get_uptime_string() {
-  unsigned long currentMillis = millis();
+  return format_uptime_string(millis());
+}
   
+String format_uptime_string(unsigned long uptime_ms) {
+
   // Вычисляем время в секундах
-  unsigned long totalSeconds = currentMillis / 1000;
+  unsigned long totalSeconds = uptime_ms / 1000;
   
   // Вычисляем часы, минуты, секунды
   unsigned long hours = totalSeconds / 3600;

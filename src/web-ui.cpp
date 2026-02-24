@@ -216,6 +216,11 @@ namespace webui
     {
     }
 
+    void MoonshineWebServer::setConfig(const config_t& cfg)
+    {
+        m_config = cfg;
+    }
+
     bool MoonshineWebServer::begin()
     {
         Serial.println(F("[WebUI] Initializing..."));

@@ -95,6 +95,19 @@ namespace webui
          */
         void setStateGetter(settings::moonshine::state_t (*getter)());
 
+        /**
+         * @brief Установить конфигурацию сервера
+         * @param cfg Новая конфигурация
+         * @note Должно быть вызвано до begin()
+         */
+        void setConfig(const config_t& cfg);
+
+        /**
+         * @brief Получить текущую конфигурацию
+         * @return Конфигурация сервера
+         */
+        const config_t& getConfig() const { return m_config; }
+
     private:
         /**
          * @brief Обработчик корневой страницы
@@ -134,35 +147,38 @@ namespace webui
 
 /**
  * @brief Пример использования в main.cpp:
- * 
+ *
  * @code
  * #include "web-ui.h"
- * 
+ *
  * // Функция получения состояния (реализовать в main.cpp)
  * settings::moonshine::state_t get_state();
- * 
+ *
  * webui::MoonshineWebServer webServer;
- * 
+ * webui::config_t webConfig;
+ *
  * void setup() {
  *     Serial.begin(115200);
- *     
- *     // Настройка конфигурации (опционально)
- *     webui::config_t cfg;
- *     cfg.wifi_ssid = "MyWiFi";
- *     cfg.wifi_password = "MyPassword";
- *     webServer = webui::MoonshineWebServer(cfg);
- *     
- *     // Инициализация
+ *
+ *     // Настройка конфигурации
+ *     webConfig.hostname = "moonshine";
+ *     webConfig.ap_ssid = "Moonshine_AP";
+ *     webConfig.ap_password = "moonshine123";
+ *     webConfig.wifi_ssid = "MyWiFi";           // опционально
+ *     webConfig.wifi_password = "MyPassword";   // опционально
+ *
+ *     // Установка конфигурации и инициализация
+ *     webServer.setConfig(webConfig);
  *     if (webServer.begin()) {
  *         Serial.println("Web server started");
  *         Serial.print("IP: ");
  *         Serial.println(webServer.getIPAddress());
  *     }
- *     
+ *
  *     // Установка функции получения состояния
  *     webServer.setStateGetter(get_state);
  * }
- * 
+ *
  * void loop() {
  *     webServer.handleClient();
  *     // ... остальная логика

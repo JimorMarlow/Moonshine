@@ -3,6 +3,20 @@
 // Вся конфигурация и платформозависимые настройки в pinout.h
 #include "pinout.h"
 #include "settings.h"
+#include "etl/etl_utility.h"
+
+// Глобальные данные
+settings::moonshine::state_t moonshine_state; // текущее состояние системы дистилляции
+
+// получить текущее состояние системы
+settings::moonshine::state_t get_moonshine_state() {
+  return moonshine_state;
+}
+
+void update_moonshine_state(const settings::moonshine::state_t& state) {
+  moonshine_state = state;
+  moonshine_state.uptime_ms = millis(); // Обновляем текущее время установки актуального состояния
+}
 
 //////////////////////////////////////////////////////////
 #include "etl/etl_memory.h"
@@ -59,6 +73,13 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 etl::shared_ptr<Button> btn = etl::make_shared<Button>(TOUCH_BTN_PIN);
 volatile int btn_clicks = 0;  // для проверки нажатий кнопки
 
+
+// WEB-UI
+#include "web-ui.h"
+// Глобальный экземпляр веб-сервера
+etl::unique_ptr<webui::MoonshineWebServer> web_server;
+bool use_web_ui = true;
+
 ///////////////////////////////////////////
 void setup() {
     Serial.begin(115200);
@@ -95,6 +116,43 @@ void setup() {
 
     // Button
    // pinMode(TOUCH_BTN_PIN, INPUT_PULLUP); // Кнопка подключена на  GND - BTN - GPIO
+
+    // WEB-UI
+    if(use_web_ui)
+    {
+      webui::config_t web_config;
+
+      // Настройка конфигурации веб-сервера
+      web_config.hostname = "moonshine";
+      web_config.ap_ssid = "Moonshine_AP";
+      web_config.ap_password = "moonshine123";
+      web_config.port = 80;
+      web_config.update_interval = 500; // 500ms
+
+      // Раскомментировать для подключения к Wi-Fi сети
+      // web_config.wifi_ssid = WIFI_SSID;
+      // web_config.wifi_password = WIFI_PASSWORD;
+
+      web_server = etl::make_unique<webui::MoonshineWebServer>(web_config);
+      if(web_server && web_server->begin()) {
+        // Установка функции получения состояния
+        web_server->setStateGetter(get_moonshine_state);
+
+        // Вывод информации о подключении
+        Serial.println(F("\n=== Web Server Info ==="));
+        Serial.print(F("Mode: "));
+        Serial.println(web_server->getMode());
+        Serial.print(F("IP Address: "));
+        Serial.println(web_server->getIPAddress());
+        Serial.print(F("Hostname: http://"));
+        Serial.print(web_server->getMode() == "AP" ? web_server->getIPAddress() : "moonshine.local");
+        Serial.println(F("/"));
+        Serial.println(F("=========================\n")); 
+      }      
+      else {
+        Serial.println(F("[ERROR] Web server initialization failed!"));
+      }    
+    }
   }
 
 void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
@@ -134,7 +192,9 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
       }
       lcd.setCursor(0, y);
       lcd.print(t->name); lcd.print(":");
-      if(auto value = t->temperature(); value)
+
+      etl::optional<float> value = t->temperature(); // current temperature value
+      if(value)
       {
         lcd.print(*value, 1);
         lcd.print("c  ");
@@ -142,6 +202,24 @@ void check_temperature(etl::shared_ptr<temperature_sensor_t> t)
       else{
         lcd.print("---    ");
       }   
+
+      // update state (я знаю, что некраисво, но пусть уж так)
+      settings::moonshine::state_t state = get_moonshine_state();
+      
+      if(t_top_column && t_top_column->name == t->name) {
+        state.steam_temperature = value;
+      }
+      else if(t_heater_tank && t_heater_tank->name == t->name) {
+        state.heater_temperature = value;
+      }
+      else if(t_deflegmator_water_out && t_deflegmator_water_out->name == t->name) {
+        state.deflegmater_temperature = value;
+      }
+      else if(t_condenser_water_out && t_condenser_water_out->name == t->name) {
+        state.condenser_temperature = value;
+      }
+
+      update_moonshine_state(state);
   }
 }
 
@@ -192,5 +270,11 @@ void loop()
         f->set_calibrate(!f->is_calibrate());
       }
     }
+  }
+
+  // Обработка клиентских запросов
+  if(web_server)
+  {
+    web_server->handleClient();
   }
 }
