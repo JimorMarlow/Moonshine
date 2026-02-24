@@ -274,3 +274,41 @@ https://ali.click/ktwszq
 #### 1.1.1 settings::moonshine::state_t
 Начал оборачивать все данные в нормальные структуры...
 
+#### 1.2.0 Web UI для ESP8266
+Добавлен веб-интерфейс для мониторинга процесса дистилляции:
+- **Платформа:** ESP8266 (NodeMCU v3)
+- **Режимы работы:**
+  - Точка доступа (AP): `Moonshine_AP` / `moonshine123`
+  - Подключение к Wi-Fi сети (STA)
+  - Комбинированный режим (STA+AP)
+- **mDNS:** http://moonshine.local (при подключении к Wi-Fi)
+- **Обновление данных:** 500ms через AJAX
+- **Файлы:**
+  - `src/web-ui.h` — объявление веб-сервера
+  - `src/web-ui.cpp` — реализация сервера с HTML шаблоном
+  - `src/main_ui.cpp` — пример инициализации
+- **API:**
+  - `GET /` — HTML страница мониторинга
+  - `GET /api/state` — JSON с текущими показаниями датчиков
+  - `GET /api/status` — JSON со статусом системы (uptime, режим, IP)
+- **Данные:** Используются из `settings::moonshine::state_t`
+- **Версия веб-интерфейса:** Синхронизирована с `MS_VERSION_STRING` из `version.h`
+
+##### Использование:
+```cpp
+#include "web-ui.h"
+
+settings::moonshine::state_t get_state(); // Ваша функция получения данных
+
+webui::MoonshineWebServer webServer;
+
+void setup() {
+    webServer.setStateGetter(get_state);
+    webServer.begin();
+}
+
+void loop() {
+    webServer.handleClient();
+}
+```
+
