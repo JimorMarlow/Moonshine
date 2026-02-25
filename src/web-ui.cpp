@@ -231,8 +231,8 @@ namespace webui
             Serial.print(F("[WebUI] Connecting to WiFi: "));
             Serial.println(m_config.wifi_ssid);
 
-            WiFi.mode(WIFI_STA);
             WiFi.hostname(m_config.hostname);
+            WiFi.mode(WIFI_STA);
             WiFi.begin(m_config.wifi_ssid, m_config.wifi_password);
 
             uint8_t attempts = 30;
@@ -288,6 +288,7 @@ namespace webui
     void MoonshineWebServer::handleClient()
     {
         if (m_initialized) {
+            MDNS.update();
             m_server.handleClient();
         }
     }
