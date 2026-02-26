@@ -114,9 +114,21 @@ void setup() {
       attachInterrupt(digitalPinToInterrupt(flow_condenser->pin), pulse_counter_C, FALLING);
     }
 
-    // Button
-   // pinMode(TOUCH_BTN_PIN, INPUT_PULLUP); // Кнопка подключена на  GND - BTN - GPIO
+    ////////////////////////////////////////////////////////////////////////////
+    // Button. Если зажата при включении - сбросить настройки сети к заводским
+    if (btn && btn->read()) Serial.println("Кнопка нажата при старте");
+    // или так
+    bool is_btn_hold_on_start = false;
+    if(btn)
+    {
+      do {
+        btn->tick();
+        if (btn->hold()) { is_btn_hold_on_start = true; }
+      } while (btn->busy() && !is_btn_hold_on_start);
+    }
+    Serial.println(is_btn_hold_on_start ? "is_btn_hold_on_start = true" : "is_btn_hold_on_start = false");
 
+    ////////////////////////////////////////////////////////////////////////////
     // WEB-UI
     if(use_web_ui)
     {
@@ -269,6 +281,11 @@ void loop()
       for(auto f : f_sensors){
         f->set_calibrate(!f->is_calibrate());
       }
+    }
+
+    // проверка на количество кликов
+    if (btn->hasClicks(3)) {
+      Serial.println("has 3 clicks - start wi-fi setup");
     }
   }
 

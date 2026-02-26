@@ -320,17 +320,11 @@
 
 ```
 docs/web-ui/
-├── qwen-distillation.045.html    # ✅ АКТУАЛЬНАЯ: Мониторинг дистилляции, встроен в web-ui.cpp, v1.2.10
-├── qwen-wifi_setup.001.html      # Базовый макет настройки WiFi
-├── qwen-wifi_setup.002.html      # Симуляция API и подзаголовок
-├── qwen-wifi_setup.003.html      # Улучшение UX и описание устройства
-├── qwen-wifi_setup.004.html      # Редизайн Selected Network и Disconnect
-├── qwen-wifi_setup.005.html      # Возврат Show/Hide текста, увеличение шрифтов
-├── qwen-wifi_setup.006.html      # Контейнер информации об устройстве
-├── qwen-wifi_setup.007.html      # Исправление отображения сетей и иконки
-├── qwen-wifi_setup.008.html      # ✅ АКТУАЛЬНАЯ: Исправление положения галочки, v1.0.8
+├── qwen-distillation.043.html    # ✅ АКТУАЛЬНАЯ: Мониторинг дистилляции, встроен в web-ui.cpp, v1.2.10
+├── qwen-wifi_setup.008.html      # ✅ АКТУАЛЬНАЯ: Настройка WiFi, v1.0.8
 ├── icon_smart_device.svg         # SVG иконка умного устройства
 ├── task_wifi_setup_design.md     # Техническое задание WiFi Setup
+├── task_webui.md                 # Техническое задание веб-интерфейса
 └── WEB_UI-HISTORY.md             # Этот файл
 ```
 
