@@ -66,7 +66,13 @@ namespace webui
         .status-bar{padding:8px;margin:5px 10px;border-radius:5px;font-size:15px;font-weight:400;text-align:center;border:1px solid;display:flex;align-items:center;justify-content:center;gap:8px}
         .status-ok{background:#d5f5e3;color:#27ae60;border-color:#27ae60}.status-warning{background:#f9e79f;color:#9a7d0a;border-color:#f1c40f}.status-error{background:#fadbd8;color:#c0392b;border-color:#e74c3c}
         .status-icon{width:16px;height:16px;display:inline-block}
-        @media(max-width:900px){.main-panel{grid-template-columns:1fr;grid-template-rows:auto auto;height:auto}.scheme-container{height:auto;min-height:480px;aspect-ratio:530/480}.sensors-panel{height:auto;max-height:none;overflow:visible}.sensors-content{overflow-y:visible}}
+        .uptime-card{display:flex;align-items:center;justify-content:space-between;background:#fafafa;border-radius:6px;padding:10px;margin-bottom:15px;border-left:4px solid #2c3e50}
+        .uptime-value{font-size:28px;font-weight:300;font-family:'Courier New',monospace;color:#2c3e50;line-height:1}
+        .bold-btn{width:36px;height:36px;border:1px solid #bdc3c7;border-radius:6px;background:#fff;color:#2c3e50;font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+        .bold-btn:hover{background:#ecf0f1}
+        .bold-btn.active{background:#3498db;color:#fff;border-color:#2980b9}
+        .bold-mode .temp-value,.bold-mode .flow-value,.bold-mode .temp-text,.bold-mode .flow-text,.bold-mode .uptime-value{font-weight:700}
+        @media(max-width:900px){.main-panel{grid-template-columns:1fr;grid-template-rows:auto auto;height:auto}.scheme-container{height:auto;min-height:480px;aspect-ratio:530/480}.sensors-panel{height:auto;max-height:none;overflow:visible}.sensors-content{overflow-y:visible}.bold-btn{width:40px;height:40px;font-size:20px}.uptime-value{font-size:24px}}
     </style>
 </head>
 <body>
@@ -145,8 +151,9 @@ namespace webui
             </div>
             <div class="sensors-panel">
                 <div class="sensors-content">
-                    <div class="sensor-card" style="border-left-color:#2c3e50;margin-bottom:15px">
-                        <div class="temp-display"><div class="temp-value" id="cardValueUptime">00:00:00</div></div>
+                    <div class="uptime-card">
+                        <div class="uptime-value" id="cardValueUptime">00:00:00</div>
+                        <button class="bold-btn" id="boldBtn" title="Жирный шрифт для цифр">B</button>
                     </div>
                     <div class="section-title">Температура</div>
                     <div class="sensor-card temp-sensor"><div class="sensor-title">Steam - Верх колонны</div><div class="temp-display"><div class="temp-value" id="cardValueSteam">--.-</div><div class="temp-unit">°C</div></div></div>
@@ -163,6 +170,12 @@ namespace webui
     </div>
     <script>
         const COLOR_BLENDER=[{temp:15,color:"#2980b9"},{temp:20,color:"#3498db"},{temp:25,color:"#f1c40f"},{temp:28,color:"#e67e22"},{temp:30,color:"#e74c3c"},{temp:35,color:"#c0392b"}];
+        let boldMode=false;
+        function toggleBoldMode(){boldMode=!boldMode;const e=document.getElementById("boldBtn"),t=document.querySelector(".container");boldMode?(e.classList.add("active"),t.classList.add("bold-mode")):(e.classList.remove("active"),t.classList.remove("bold-mode"))}
+        document.getElementById("boldBtn").addEventListener("click",toggleBoldMode);
+        let lastUpdateTime=Date.now(),connectionState="connected";
+        function updateConnectionState(){const e=Date.now(),t=(e-lastUpdateTime)/1e3,n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText");t>=20?(connectionState="error",n.className="status-bar status-error",o.textContent="✕",r.textContent="Устройство не отвечает"):t>=10?(connectionState="warning",n.className="status-bar status-warning",o.textContent="⚠",r.textContent="Устройство не отвечает"):connectionState="connected"}
+        setInterval(updateConnectionState,500);
         function hexToRgb(e){const t=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(e);return t?{r:parseInt(t[1],16),g:parseInt(t[2],16),b:parseInt(t[3],16)}:{r:0,g:0,b:0}}
         function rgbToString(e){return`rgb(${Math.round(e.r)},${Math.round(e.g)},${Math.round(e.b)})`}
         function getTempColor(e){if(COLOR_BLENDER.length===0)return"#2c3e50";if(COLOR_BLENDER.length===1)return COLOR_BLENDER[0].color;const t=[...COLOR_BLENDER].sort(((e,t)=>e.temp-t.temp));if(e<=t[0].temp)return t[0].color;if(e>=t[t.length-1].temp)return t[t.length-1].color;for(let n=0;n<t.length-1;n++)if(e>=t[n].temp&&e<=t[n+1].temp){const o=t[n],r=t[n+1],s=(e-o.temp)/(r.temp-o.temp),a=hexToRgb(o.color),i=hexToRgb(r.color);return rgbToString({r:a.r+s*(i.r-a.r),g:a.g+s*(i.g-a.g),b:a.b+s*(i.b-a.b)})}return t[t.length-1].color}
@@ -174,8 +187,9 @@ namespace webui
         function updateHeaterBubbles(e){const t=document.querySelectorAll(".bubble");if(!t.length)return;let n="";e>90?n="bubble-speed-7":e>85?n="bubble-speed-6":e>80?n="bubble-speed-5":e>75?n="bubble-speed-4":e>70?n="bubble-speed-3":e>65?n="bubble-speed-2":e>60&&(n="bubble-speed-1"),t.forEach((e=>{e.classList.remove("bubble-speed-1","bubble-speed-2","bubble-speed-3","bubble-speed-4","bubble-speed-5","bubble-speed-6","bubble-speed-7"),n?(e.classList.add(n),e.style.display="block"):e.style.display="none"}))}
         function getColumnColors(e,t){return{low:getTempColor(e>35?35:e),high:getTempColor(t>35?35:t)}}
         function checkRules(e){const t=[],{Heater:n,CoolFlow:o,CoolT:r,DFT:s,DFFlow:a}=e;n.value>55&&0===o.value&&t.push({type:"warning",text:"Включите подачу воды в охладитель"}),r.value>30&&(0===o.value?t.push({type:"error",text:"Нет воды в охладителе!"}):t.push({type:"warning",text:"Добавьте воды в охладитель"})),s.value>30&&(0===a.value?t.push({type:"error",text:"Нет воды в дефлегматоре!"}):t.push({type:"warning",text:"Добавьте воды в дефлегматор"}));return 0===t.length&&t.push({type:"ok",text:"Система работает нормально"}),t}
-        function updateStatusBar(e){const t=checkRules(e),n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText"),s={error:3,warning:2,ok:1},a=t.reduce(((e,t)=>s[t.type]>s[e.type]?t:e));n.className="status-bar",n.classList.add(`status-${a.type}`),o.textContent="ok"===a.type?"✓":"warning"===a.type?"⚠":"✕",r.textContent=a.text}
+        function updateStatusBar(e){if(connectionState!=="connected")return;const t=checkRules(e),n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText"),s={error:3,warning:2,ok:1},a=t.reduce(((e,t)=>s[t.type]>s[e.type]?t:e));n.className="status-bar",n.classList.add(`status-${a.type}`),o.textContent="ok"===a.type?"✓":"warning"===a.type?"⚠":"✕",r.textContent=a.text}
         function updateSensors(e){
+            if(connectionState!=="connected")return;
             document.getElementById("valueHeaterNum").textContent=e.heater_temperature?formatTemp(e.heater_temperature)+"°":"--.-°";
             document.getElementById("valueSteamNum").textContent=e.steam_temperature?formatTemp(e.steam_temperature)+"°":"--.-°";
             document.getElementById("valueDFTNum").textContent=e.deflegmater_temperature?formatTemp(e.deflegmater_temperature)+"°":"--.-°";
@@ -200,7 +214,7 @@ namespace webui
             updateStatusBar({Heater:{value:e.heater_temperature||20},CoolFlow:{value:e.condenser_water_flow},CoolT:{value:e.condenser_temperature||20},DFT:{value:e.deflegmater_temperature||20},DFFlow:{value:e.deflegmater_water_flow}});
             document.getElementById("lastUpdate").textContent=new Date().toLocaleTimeString("ru-RU");
         }
-        function fetchState(){fetch("/api/state").then((e=>e.json())).then((e=>{updateSensors(e)})).catch((e=>{console.error("Error fetching state:",e)}));}
+        function fetchState(){fetch("/api/state").then((e=>e.json())).then((e=>{lastUpdateTime=Date.now();updateSensors(e)})).catch((e=>{console.error("Error fetching state:",e)}));}
         fetchState();
         setInterval(fetchState,500);
     </script>
