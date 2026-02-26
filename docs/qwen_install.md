@@ -88,6 +88,48 @@ Select Qwen OAuth (Free) authentication and follow the prompts to log in. Then l
 #### Прямая ссылка
 - [Qwen Code на Marketplace](https://marketplace.visualstudio.com/items?itemName=alibaba-cloud.qwen-code)
 
+### IntelliJ IDEA Plugin
+1. Откройте IntelliJ IDEA
+2. Перейдите в **Preferences** (`Ctrl+Alt+S` или `Cmd+,`)
+3. Перейдите в **Plugins**
+4. Нажмите **Browse repositories...**
+5. В поиске введите: **Lingma Alibaba Cloud AI Coding Asssitant**
+6. Найдите плагин от **Lingma**
+7. Нажмите **Install**
+8. Перезагрузите IntelliJ IDEA
+9. После перезагрузки, плагин попросит авторизацию через аккаунт Alibaba Cloud или API-ключ (если есть). Есть нет аккаунта, его можно бесплатно зарегистрировать на [Alibaba Cloud](https://www.alibabacloud.com/).
+
+#### Ссылки
+
+- [Lingma Alibaba Cloud AI Coding Asssitant](https://plugins.jetbrains.com/plugin/17809-lingma--alibaba-cloud-ai-coding-assistant)
+- [Lingma Quick Start](https://www.alibabacloud.com/help/en/lingma/getting-started/lingma-ide-get-started?spm=a2c63.p38356.help-menu-2804669.d_1_0.1531ebb88g6QQh)
+
+### IntelliJ MCP Server
+
+1. Устанавливаем qwen-code
+2. Запускаем, делаем первичные настройки: авторизуемся в chat.qwen.ai
+3. Идем в настройки IDEA, Tools -> MCP Server.
+4. Включаем MCP Server
+5. Копируем настройки с помощью Copy SSE Config
+6. Открываем файл `~/.qwen/settings.json` (на маке)
+7. Добавляем в корень json новый параметр `mcpServers` и в нём прописываем наш сервер.
+
+```json
+"mcpServers": {
+    "idea": {
+      "type": "sse",
+      "url": "http://localhost:64342/sse",
+      "headers": {
+        "IJ_MCP_SERVER_PROJECT_PATH": null
+      }
+    }
+  }
+```
+
+8. Запускаем qwen-code и выполняем команду `/mcp list`
+
+[Интеграция coding-агента с MCP-сервером Idea](https://habr.com/ru/articles/989716/)
+
 ---
 
 ### Шаг 4: Настройка после установки
@@ -173,6 +215,8 @@ brew install git
 - **Веб-интерфейс:** [chat.qwen.ai](https://chat.qwen.ai/)
 - **GitHub:** [QwenLM/Qwen](https://github.com/QwenLM/Qwen)
 - **VS Code Marketplace:** [Qwen Code Extension](https://marketplace.visualstudio.com/items?itemName=alibaba-cloud.qwen-code)
+- **IntelliJ IDEA Plugin:** [Lingma Alibaba Cloud AI Coding Asssitant](https://plugins.jetbrains.com/plugin/17809-lingma--alibaba-cloud-ai-coding-assistant)
+- **IntelliJ IDEA QWEN MCP Integration:** [Интеграция coding-агента с MCP-сервером Idea](https://habr.com/ru/articles/989716/)
 
 ---
 

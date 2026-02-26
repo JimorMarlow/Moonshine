@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP Device - WiFi Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #FFFFFF;
+            min-height: 100vh;
+            color: #1C1C1E;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #C6C6C8;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1C1C1E;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: #8E8E93;
+            font-weight: 400;
+            margin-top: 4px;
+        }
+
+        .header-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lang-switch {
+            display: flex;
+            gap: 8px;
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            border: 1px solid #C6C6C8;
+            border-radius: 6px;
+            background: #FFFFFF;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: #007AFF;
+            border-color: #007AFF;
+            color: #FFFFFF;
+        }
+
+        .lang-btn:hover {
+            border-color: #007AFF;
+        }
+
+        /* Version label */
+        .version-label {
+            font-size: 13px;
+            color: #8E8E93;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Status section */
+        .status-section {
+            background: #F2F2F7;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.disconnected {
+            background: #FF3B30;
+        }
+
+        .status-indicator.connecting {
+            background: #FF9500;
+            animation: pulse 1s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #34C759;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            flex: 1;
+            font-size: 15px;
+            color: #1C1C1E;
+        }
+
+        .status-details {
+            font-size: 13px;
+            color: #8E8E93;
+            margin-top: 4px;
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            border: 1px solid #007AFF;
+            border-radius: 8px;
+            background: #FFFFFF;
+            color: #007AFF;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #007AFF;
+            color: #FFFFFF;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Networks section */
+        .section-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1C1C1E;
+            margin-bottom: 12px;
+        }
+
+        .networks-list {
+            background: #F2F2F7;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .network-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #C6C6C8;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .network-item:last-child {
+            border-bottom: none;
+        }
+
+        .network-item:hover {
+            background: #E5E5EA;
+        }
+
+        .network-item.selected {
+            background: #007AFF;
+        }
+
+        .network-item.selected .network-name,
+        .network-item.selected .network-signal,
+        .network-item.selected .network-lock {
+            color: #FFFFFF;
+        }
+
+        .network-icon {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+
+        .network-info {
+            flex: 1;
+        }
+
+        .network-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1C1C1E;
+            margin-bottom: 4px;
+        }
+
+        .network-signal {
+            font-size: 13px;
+            color: #8E8E93;
+        }
+
+        .network-lock {
+            font-size: 14px;
+            color: #8E8E93;
+        }
+
+        /* Password section */
+        .password-section {
+            background: #F2F2F7;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #8E8E93;
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-field {
+            width: 100%;
+            height: 44px;
+            padding: 0 12px;
+            border: 1px solid #C6C6C8;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #1C1C1E;
+            background: #FFFFFF;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #007AFF;
+        }
+
+        .input-field::placeholder {
+            color: #C7C7CC;
+        }
+
+        .show-password-btn {
+            position: absolute;
+            right: 12px;
+            padding: 6px 10px;
+            border: none;
+            background: transparent;
+            color: #007AFF;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* AP Settings section */
+        .ap-settings-section {
+            background: #F2F2F7;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .ap-settings-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1C1C1E;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #C6C6C8;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            height: 44px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .btn:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-primary {
+            background: #007AFF;
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background: #0056CC;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #FFFFFF;
+            color: #007AFF;
+            border: 1px solid #007AFF;
+        }
+
+        .btn-secondary:hover {
+            background: #007AFF;
+            color: #FFFFFF;
+        }
+
+        .btn-danger {
+            background: #FF3B30;
+            color: #FFFFFF;
+        }
+
+        .btn-danger:hover {
+            background: #D63026;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #FFFFFF;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #FFFFFF;
+            border-radius: 14px;
+            padding: 20px;
+            max-width: 320px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1C1C1E;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: #1C1C1E;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn-cancel {
+            background: #F2F2F7;
+            color: #1C1C1E;
+        }
+
+        .modal-btn-confirm {
+            background: #FF3B30;
+            color: #FFFFFF;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+
+            .header-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title-group">
+                <div class="header-title" data-i18n="title">WiFi Setup</div>
+                <div class="header-subtitle" id="deviceSubtitle">ESP Device v1.0.0</div>
+            </div>
+            <div class="lang-switch">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
+        </div>
+
+        <!-- Version -->
+        <div class="version-label hidden" id="versionLabel">ESP Device v1.0.0</div>
+
+        <!-- Status Section -->
+        <div class="status-section">
+            <div class="status-indicator disconnected" id="statusIndicator"></div>
+            <div class="status-text">
+                <div id="statusText" data-i18n="status_disconnected">Disconnected</div>
+                <div class="status-details" id="statusDetails"></div>
+            </div>
+            <button class="refresh-btn" id="refreshBtn" data-i18n="refresh_btn">Refresh</button>
+        </div>
+
+        <!-- Networks Section -->
+        <div class="section-title" data-i18n="select_network">Select Network</div>
+        <div class="networks-list" id="networksList">
+            <div class="network-item" style="justify-content: center; color: #8E8E93;">
+                <span data-i18n="scan_networks">Scan networks to see available networks</span>
+            </div>
+        </div>
+
+        <!-- Password Section -->
+        <div class="password-section" id="passwordSection">
+            <div class="input-group">
+                <label class="input-label" data-i18n="selected_network">Selected Network</label>
+                <input type="text" class="input-field" id="selectedSsid" readonly placeholder="Not selected">
+            </div>
+            <div class="input-group">
+                <label class="input-label" data-i18n="password_label">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" class="input-field" id="passwordInput" data-i18n-placeholder="password_placeholder" placeholder="Enter password">
+                    <button type="button" class="show-password-btn" id="showPasswordBtn" data-i18n="show_password">Show</button>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="connectBtn" style="margin-top: 12px;" data-i18n="connect_btn">
+                Connect
+            </button>
+        </div>
+
+        <!-- AP Settings Section -->
+        <div class="ap-settings-section">
+            <div class="ap-settings-title" data-i18n="ap_settings_title">Access Point Settings</div>
+            <div class="input-group">
+                <label class="input-label" data-i18n="ap_ssid_label">AP SSID</label>
+                <input type="text" class="input-field" id="apSsidInput" value="ESP_Device_AP">
+            </div>
+            <div class="input-group">
+                <label class="input-label" data-i18n="ap_password_label">AP Password</label>
+                <div class="input-wrapper">
+                    <input type="password" class="input-field" id="apPasswordInput" value="password123">
+                    <button type="button" class="show-password-btn" id="showApPasswordBtn" data-i18n="show_password">Show</button>
+                </div>
+            </div>
+            <button class="btn btn-secondary" id="applyApSettingsBtn" style="margin-top: 12px;" data-i18n="apply_ap_settings_btn">
+                Apply AP Settings
+            </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <button class="btn btn-primary" id="saveRebootBtn" data-i18n="save_reboot_btn">Save & Reboot</button>
+        <button class="btn btn-danger" id="factoryResetBtn" data-i18n="factory_reset_btn">Factory Reset</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-title" id="modalTitle">Confirm</div>
+            <div class="modal-message" id="modalMessage">Are you sure?</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modalCancelBtn" data-i18n="cancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modalConfirmBtn" data-i18n="confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Localization
+        const translations = {
+            en: {
+                title: 'WiFi Setup',
+                version_label: 'ESP Device v1.0.0',
+                device_subtitle: 'ESP Device v1.0.0',
+                refresh_btn: 'Refresh',
+                select_network: 'Select Network',
+                scan_networks: 'Scan networks to see available networks',
+                selected_network: 'Selected Network',
+                password_label: 'Password',
+                password_placeholder: 'Enter password',
+                show_password: 'Show',
+                hide_password: 'Hide',
+                connect_btn: 'Connect',
+                connecting: 'Connecting...',
+                ap_settings_title: 'Access Point Settings',
+                ap_ssid_label: 'AP SSID',
+                ap_password_label: 'AP Password',
+                apply_ap_settings_btn: 'Apply AP Settings',
+                save_reboot_btn: 'Save & Reboot',
+                factory_reset_btn: 'Factory Reset',
+                status_disconnected: 'Disconnected',
+                status_connecting: 'Connecting...',
+                status_connected: 'Connected',
+                confirm_reset: 'Are you sure you want to reset to factory settings?',
+                cancel: 'Cancel',
+                confirm: 'Confirm',
+                success_saved: 'Settings saved! Rebooting...',
+                success_ap_applied: 'AP settings applied! Reconnecting...',
+                error_connection: 'Connection failed. Check password.',
+                error_no_network: 'Please select a network first.',
+                no_networks: 'No networks found',
+                signal_excellent: 'Excellent',
+                signal_good: 'Good',
+                signal_weak: 'Weak',
+                signal_very_weak: 'Very Weak'
+            },
+            ru: {
+                title: 'Настройка WiFi',
+                version_label: 'ESP Device v1.0.0',
+                device_subtitle: 'ESP Device v1.0.0',
+                refresh_btn: 'Обновить',
+                select_network: 'Выберите сеть',
+                scan_networks: 'Нажмите "Обновить" для поиска сетей',
+                selected_network: 'Выбранная сеть',
+                password_label: 'Пароль',
+                password_placeholder: 'Введите пароль',
+                show_password: 'Показать',
+                hide_password: 'Скрыть',
+                connect_btn: 'Подключиться',
+                connecting: 'Подключение...',
+                ap_settings_title: 'Настройки точки доступа',
+                ap_ssid_label: 'SSID точки доступа',
+                ap_password_label: 'Пароль точки доступа',
+                apply_ap_settings_btn: 'Применить настройки AP',
+                save_reboot_btn: 'Запомнить и перезапустить',
+                factory_reset_btn: 'Сброс настроек',
+                status_disconnected: 'Не подключено',
+                status_connecting: 'Подключение...',
+                status_connected: 'Подключено',
+                confirm_reset: 'Вы уверены, что хотите сбросить настройки к заводским?',
+                cancel: 'Отмена',
+                confirm: 'Подтвердить',
+                success_saved: 'Настройки сохранены! Перезагрузка...',
+                success_ap_applied: 'Настройки AP применены! Переподключение...',
+                error_connection: 'Ошибка подключения. Проверьте пароль.',
+                error_no_network: 'Пожалуйста, выберите сеть.',
+                no_networks: 'Сети не найдены',
+                signal_excellent: 'Отличный',
+                signal_good: 'Хороший',
+                signal_weak: 'Слабый',
+                signal_very_weak: 'Очень слабый'
+            }
+        };
+
+        // State
+        let currentLang = localStorage.getItem('wifiSetupLang') || 'en';
+        let selectedNetwork = null;
+        let networks = [];
+
+        // Device configuration (can be overridden by actual device)
+        window.deviceConfig = {
+            version: 'ESP Device v1.0.0',
+            subtitle: '' // e.g., 'Moonshine v1.2.3' or 'Distillation Control System'
+        };
+
+        // Simulation mode (set to false for production)
+        const SIMULATION_MODE = true;
+
+        // DOM Elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const statusDetails = document.getElementById('statusDetails');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const networksList = document.getElementById('networksList');
+        const passwordSection = document.getElementById('passwordSection');
+        const selectedSsid = document.getElementById('selectedSsid');
+        const passwordInput = document.getElementById('passwordInput');
+        const showPasswordBtn = document.getElementById('showPasswordBtn');
+        const connectBtn = document.getElementById('connectBtn');
+        const apSsidInput = document.getElementById('apSsidInput');
+        const apPasswordInput = document.getElementById('apPasswordInput');
+        const showApPasswordBtn = document.getElementById('showApPasswordBtn');
+        const applyApSettingsBtn = document.getElementById('applyApSettingsBtn');
+        const saveRebootBtn = document.getElementById('saveRebootBtn');
+        const factoryResetBtn = document.getElementById('factoryResetBtn');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+        // Initialize
+        function init() {
+            // Apply device configuration
+            applyDeviceConfig();
+            
+            setLanguage(currentLang);
+            updateStatusUI();
+            scanNetworks();
+        }
+
+        // Apply device configuration
+        function applyDeviceConfig() {
+            const config = window.deviceConfig || {};
+            if (config.subtitle && config.subtitle !== 'ESP Device v1.0.0') {
+                translations.en.device_subtitle = config.subtitle;
+                translations.ru.device_subtitle = config.subtitle;
+            }
+        }
+
+        // Language
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('wifiSetupLang', lang);
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (translations[lang][key]) {
+                    el.placeholder = translations[lang][key];
+                }
+            });
+
+            // Update device subtitle
+            const deviceSubtitle = document.getElementById('deviceSubtitle');
+            const versionLabel = document.getElementById('versionLabel');
+            const subtitleText = translations[lang].device_subtitle || translations[lang].version_label;
+            
+            if (subtitleText && subtitleText !== 'ESP Device v1.0.0') {
+                deviceSubtitle.textContent = subtitleText;
+                deviceSubtitle.classList.remove('hidden');
+                versionLabel.classList.add('hidden');
+            } else {
+                deviceSubtitle.classList.add('hidden');
+                versionLabel.classList.remove('hidden');
+                versionLabel.textContent = translations[lang].version_label;
+            }
+
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+
+            // Update show/hide password buttons
+            updateShowPasswordButtons();
+        }
+
+        function updateShowPasswordButtons() {
+            const showText = translations[currentLang].show_password;
+            const hideText = translations[currentLang].hide_password;
+            showPasswordBtn.textContent = passwordInput.type === 'password' ? showText : hideText;
+            showApPasswordBtn.textContent = apPasswordInput.type === 'password' ? showText : hideText;
+        }
+
+        // Status
+        function updateStatusUI() {
+            statusIndicator.className = 'status-indicator disconnected';
+            statusText.textContent = translations[currentLang].status_disconnected;
+            statusDetails.textContent = '';
+        }
+
+        function setStatus(status, details = '') {
+            statusIndicator.className = `status-indicator ${status}`;
+            statusText.textContent = translations[currentLang][`status_${status}`];
+            statusDetails.textContent = details;
+        }
+
+        // Scan networks
+        async function scanNetworks() {
+            refreshBtn.disabled = true;
+            networksList.innerHTML = '<div class="network-item" style="justify-content: center;"><span class="spinner" style="border-color: #007AFF; border-top-color: transparent;"></span></div>';
+
+            try {
+                let data;
+                
+                if (SIMULATION_MODE) {
+                    // Simulate API response with FIREFLY networks
+                    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate delay
+                    data = {
+                        networks: generateSimulatedNetworks()
+                    };
+                } else {
+                    const response = await fetch('/api/scan');
+                    data = await response.json();
+                }
+
+                if (data.networks && data.networks.length > 0) {
+                    networks = data.networks.sort((a, b) => b.rssi - a.rssi);
+                    renderNetworks();
+                } else {
+                    networksList.innerHTML = `<div class="network-item" style="justify-content: center; color: #8E8E93;">${translations[currentLang].no_networks}</div>`;
+                }
+            } catch (error) {
+                networksList.innerHTML = `<div class="network-item" style="justify-content: center; color: #FF3B30;">Error: ${error.message}</div>`;
+            }
+
+            refreshBtn.disabled = false;
+        }
+
+        // Generate simulated networks for demo
+        function generateSimulatedNetworks() {
+            const baseNetworks = [
+                { ssid: 'FIREFLY_HOME', baseRssi: -45, encryption: 'WPA2' },
+                { ssid: 'FIREFLY_GUEST', baseRssi: -55, encryption: 'WPA2' },
+                { ssid: 'FIREFLY_IOT', baseRssi: -65, encryption: 'WPA2' }
+            ];
+
+            return baseNetworks.map(net => ({
+                ssid: net.ssid,
+                rssi: net.baseRssi + Math.floor(Math.random() * 11) - 5, // ±5 dBm variation
+                encryption: net.encryption,
+                channel: Math.floor(Math.random() * 11) + 1 // Channels 1-11
+            }));
+        }
+
+        function renderNetworks() {
+            networksList.innerHTML = networks.map((network, index) => {
+                const signalQuality = getSignalQuality(network.rssi);
+                const signalText = translations[currentLang][`signal_${signalQuality}`];
+                const lockIcon = network.encryption === 'none' ? '🔓' : '🔒';
+                const signalIcon = getSignalIcon(signalQuality);
+                const selected = selectedNetwork === network.ssid ? 'selected' : '';
+
+                return `
+                    <div class="network-item ${selected}" data-index="${index}">
+                        <div class="network-icon">${signalIcon}</div>
+                        <div class="network-info">
+                            <div class="network-name">${escapeHtml(network.ssid)}</div>
+                            <div class="network-signal">${signalText} • ${network.encryption || 'Open'}</div>
+                        </div>
+                        <div class="network-lock">${lockIcon}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add click handlers
+            networksList.querySelectorAll('.network-item').forEach(item => {
+                item.addEventListener('click', () => selectNetwork(parseInt(item.dataset.index)));
+            });
+        }
+
+        function getSignalQuality(rssi) {
+            if (rssi >= -60) return 'excellent';
+            if (rssi >= -70) return 'good';
+            if (rssi >= -80) return 'weak';
+            return 'very_weak';
+        }
+
+        function getSignalIcon(quality) {
+            const icons = {
+                excellent: '📶',
+                good: '📶',
+                weak: '📶',
+                very_weak: '📶'
+            };
+            return icons[quality] || '📶';
+        }
+
+        function selectNetwork(index) {
+            selectedNetwork = networks[index].ssid;
+            selectedSsid.value = selectedNetwork;
+            passwordInput.value = '';
+            renderNetworks();
+        }
+
+        // Show/hide password
+        showPasswordBtn.addEventListener('click', () => {
+            passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+            updateShowPasswordButtons();
+        });
+
+        showApPasswordBtn.addEventListener('click', () => {
+            apPasswordInput.type = apPasswordInput.type === 'password' ? 'text' : 'password';
+            updateShowPasswordButtons();
+        });
+
+        // Connect
+        connectBtn.addEventListener('click', async () => {
+            if (!selectedNetwork) {
+                alert(translations[currentLang].error_no_network);
+                return;
+            }
+
+            const password = passwordInput.value;
+            if (password.length < 8) {
+                alert(translations[currentLang].password_placeholder);
+                return;
+            }
+
+            connectBtn.disabled = true;
+            connectBtn.innerHTML = '<span class="spinner"></span>' + translations[currentLang].connecting;
+            setStatus('connecting');
+
+            try {
+                let result;
+                
+                if (SIMULATION_MODE) {
+                    // Simulate API response
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate connection delay
+                    // All passwords are "12345678" for FIREFLY networks
+                    const success = password === '12345678';
+                    result = {
+                        success: success,
+                        ip: success ? '192.168.1.' + (Math.floor(Math.random() * 200) + 10) : null
+                    };
+                    if (!success) {
+                        throw new Error('Invalid password');
+                    }
+                } else {
+                    const response = await fetch('/api/connect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ssid: selectedNetwork, password })
+                    });
+                    result = await response.json();
+                }
+
+                if (result.success) {
+                    setStatus('connected', `${selectedNetwork} • ${result.ip}`);
+                    connectBtn.innerHTML = '✅ ' + translations[currentLang].status_connected;
+                } else {
+                    setStatus('disconnected');
+                    connectBtn.innerHTML = '❌ ' + translations[currentLang].error_connection;
+                    setTimeout(() => {
+                        connectBtn.disabled = false;
+                        connectBtn.innerHTML = translations[currentLang].connect_btn;
+                    }, 2000);
+                }
+            } catch (error) {
+                setStatus('disconnected');
+                connectBtn.innerHTML = '❌ ' + translations[currentLang].error_connection;
+                setTimeout(() => {
+                    connectBtn.disabled = false;
+                    connectBtn.innerHTML = translations[currentLang].connect_btn;
+                }, 2000);
+            }
+        });
+
+        // Apply AP Settings
+        applyApSettingsBtn.addEventListener('click', async () => {
+            const apSsid = apSsidInput.value;
+            const apPassword = apPasswordInput.value;
+
+            if (apSsid.length < 1) {
+                alert('AP SSID must be at least 1 character');
+                return;
+            }
+
+            if (apPassword.length < 8) {
+                alert('AP Password must be at least 8 characters');
+                return;
+            }
+
+            applyApSettingsBtn.disabled = true;
+            applyApSettingsBtn.innerHTML = '<span class="spinner"></span>' + translations[currentLang].connecting;
+
+            try {
+                let result;
+                
+                if (SIMULATION_MODE) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    result = { success: true, ap_ssid: apSsid };
+                } else {
+                    const response = await fetch('/api/ap_settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ap_ssid: apSsid, ap_password: apPassword })
+                    });
+                    result = await response.json();
+                }
+
+                if (result.success) {
+                    alert(translations[currentLang].success_ap_applied);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    alert('Error applying AP settings');
+                    applyApSettingsBtn.disabled = false;
+                    applyApSettingsBtn.textContent = translations[currentLang].apply_ap_settings_btn;
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                applyApSettingsBtn.disabled = false;
+                applyApSettingsBtn.textContent = translations[currentLang].apply_ap_settings_btn;
+            }
+        });
+
+        // Save & Reboot
+        saveRebootBtn.addEventListener('click', async () => {
+            if (!selectedNetwork) {
+                alert(translations[currentLang].error_no_network);
+                return;
+            }
+
+            saveRebootBtn.disabled = true;
+            saveRebootBtn.innerHTML = '<span class="spinner"></span>' + translations[currentLang].success_saved;
+
+            try {
+                if (SIMULATION_MODE) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Simulate reboot
+                    document.body.innerHTML = `
+                        <div class="container" style="text-align: center; padding: 40px;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">✅</div>
+                            <h2 style="color: #1C1C1E; margin-bottom: 12px;">${translations[currentLang].success_saved}</h2>
+                            <p style="color: #8E8E93;">Redirecting to http://espdevice.local...</p>
+                        </div>
+                    `;
+                    setTimeout(() => {
+                        // In real mode, would redirect to espdevice.local
+                        console.log('Would redirect to http://espdevice.local');
+                    }, 3000);
+                } else {
+                    await fetch('/api/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ssid: selectedNetwork,
+                            password: passwordInput.value
+                        })
+                    });
+
+                    setTimeout(() => {
+                        window.location.href = 'http://espdevice.local';
+                    }, 3000);
+                }
+            } catch (error) {
+                saveRebootBtn.disabled = false;
+                saveRebootBtn.textContent = translations[currentLang].save_reboot_btn;
+                alert('Error saving settings');
+            }
+        });
+
+        // Factory Reset
+        factoryResetBtn.addEventListener('click', () => {
+            showModal(
+                translations[currentLang].factory_reset_btn,
+                translations[currentLang].confirm_reset,
+                async () => {
+                    if (SIMULATION_MODE) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        document.body.innerHTML = `
+                            <div class="container" style="text-align: center; padding: 40px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">🔄</div>
+                                <h2 style="color: #1C1C1E; margin-bottom: 12px;">Factory Reset</h2>
+                                <p style="color: #8E8E93;">Device is resetting to factory settings...</p>
+                                <p style="color: #8E8E93; margin-top: 20px;">Reconnecting to ESP_Device_AP...</p>
+                            </div>
+                        `;
+                    } else {
+                        fetch('/api/reset', { method: 'POST' })
+                            .then(() => {
+                                setTimeout(() => location.reload(), 2000);
+                            })
+                            .catch(() => alert('Error resetting'));
+                    }
+                }
+            );
+        });
+
+        // Modal
+        function showModal(title, message, onConfirm) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalOverlay.classList.add('active');
+
+            modalConfirmBtn.onclick = () => {
+                modalOverlay.classList.remove('active');
+                onConfirm();
+            };
+
+            modalCancelBtn.onclick = () => {
+                modalOverlay.classList.remove('active');
+            };
+        }
+
+        // Refresh button
+        refreshBtn.addEventListener('click', scanNetworks);
+
+        // Language switch
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => setLanguage(btn.getAttribute('data-lang')));
+        });
+
+        // Helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
