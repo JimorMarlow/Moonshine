@@ -222,32 +222,58 @@ namespace webui
 </html>
 )rawliteral";
 
-    MoonshineWebServer server;
-
-    MoonshineWebServer::MoonshineWebServer(const config_t& cfg)
+    moonshine_web_server::moonshine_web_server(const etl::wifi::server_config_t& cfg)
         : m_config(cfg)
         , m_server(m_config.port)
     {
     }
 
-    void MoonshineWebServer::setConfig(const config_t& cfg)
+    moonshine_web_server::~moonshine_web_server()
+    {
+        stop();
+    }
+
+    void moonshine_web_server::stop()
+    {
+        if (!m_initialized) {
+            return;
+        }
+
+        Serial.println(F("[WebUI] Stopping..."));
+
+        // Остановка HTTP сервера
+        m_server.stop();
+
+        // Остановка mDNS
+        MDNS.end();
+
+        // Отключение WiFi
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+
+        m_initialized = false;
+
+        Serial.println(F("[WebUI] Stopped"));
+    }
+
+    void moonshine_web_server::set_config(const etl::wifi::server_config_t& cfg)
     {
         m_config = cfg;
     }
 
-    bool MoonshineWebServer::begin()
+    bool moonshine_web_server::begin()
     {
         Serial.println(F("[WebUI] Initializing..."));
 
         // Настройка WiFi
-        if (m_config.wifi_ssid && strlen(m_config.wifi_ssid) > 0) {
+        if (m_config.wifi_ssid.length() > 0) {
             // Режим STA+AP или только STA
             Serial.print(F("[WebUI] Connecting to WiFi: "));
             Serial.println(m_config.wifi_ssid);
 
             WiFi.hostname(m_config.hostname);
             WiFi.mode(WIFI_STA);
-            WiFi.begin(m_config.wifi_ssid, m_config.wifi_password);
+            WiFi.begin(m_config.wifi_ssid.c_str(), m_config.wifi_password.c_str());
 
             uint8_t attempts = 30;
             while (WiFi.status() != WL_CONNECTED && attempts > 0) {
@@ -263,7 +289,7 @@ namespace webui
             } else {
                 Serial.println(F("\n[WebUI] WiFi connection failed, falling back to AP"));
                 WiFi.mode(WIFI_AP);
-                WiFi.softAP(m_config.ap_ssid, m_config.ap_password);
+                WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
                 Serial.print(F("[WebUI] AP IP: "));
                 Serial.println(WiFi.softAPIP());
             }
@@ -271,13 +297,13 @@ namespace webui
             // Только AP режим
             Serial.println(F("[WebUI] Starting in AP mode"));
             WiFi.mode(WIFI_AP);
-            WiFi.softAP(m_config.ap_ssid, m_config.ap_password);
+            WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
             Serial.print(F("[WebUI] AP IP: "));
             Serial.println(WiFi.softAPIP());
         }
 
         // mDNS
-        if (MDNS.begin(m_config.hostname)) {
+        if (MDNS.begin(m_config.hostname.c_str())) {
             Serial.print(F("[WebUI] mDNS: http://"));
             Serial.print(m_config.hostname);
             Serial.println(F(".local"));
@@ -285,9 +311,9 @@ namespace webui
         }
 
         // Регистрация обработчиков
-        m_server.on("/", HTTP_GET, std::bind(&MoonshineWebServer::handleRoot, this));
-        m_server.on("/api/state", HTTP_GET, std::bind(&MoonshineWebServer::handleApiState, this));
-        m_server.on("/api/status", HTTP_GET, std::bind(&MoonshineWebServer::handleApiStatus, this));
+        m_server.on("/", HTTP_GET, std::bind(&moonshine_web_server::handle_root, this));
+        m_server.on("/api/state", HTTP_GET, std::bind(&moonshine_web_server::handle_api_state, this));
+        m_server.on("/api/status", HTTP_GET, std::bind(&moonshine_web_server::handle_api_status, this));
         m_server.onNotFound([]() {
             Serial.println(F("[WebUI] 404 Not Found"));
         });
@@ -299,7 +325,7 @@ namespace webui
         return true;
     }
 
-    void MoonshineWebServer::handleClient()
+    void moonshine_web_server::handle_client()
     {
         if (m_initialized) {
             MDNS.update();
@@ -307,12 +333,12 @@ namespace webui
         }
     }
 
-    bool MoonshineWebServer::isConnected() const
+    bool moonshine_web_server::is_connected() const
     {
         return WiFi.status() == WL_CONNECTED || WiFi.getMode() == WIFI_AP;
     }
 
-    String MoonshineWebServer::getIPAddress() const
+    String moonshine_web_server::get_ip_address() const
     {
         if (WiFi.status() == WL_CONNECTED) {
             return WiFi.localIP().toString();
@@ -320,7 +346,7 @@ namespace webui
         return WiFi.softAPIP().toString();
     }
 
-    String MoonshineWebServer::getMode() const
+    String moonshine_web_server::get_mode() const
     {
         WiFiMode_t mode = WiFi.getMode();
         switch (mode) {
@@ -331,12 +357,12 @@ namespace webui
         }
     }
 
-    void MoonshineWebServer::setStateGetter(settings::moonshine::state_t (*getter)())
+    void moonshine_web_server::set_state_getter(settings::moonshine::state_t (*getter)())
     {
-        m_stateGetter = getter;
+        m_state_getter = getter;
     }
 
-    void MoonshineWebServer::handleRoot()
+    void moonshine_web_server::handle_root()
     {
         Serial.println(F("[WebUI] Serving HTML page"));
 
@@ -349,13 +375,13 @@ namespace webui
         m_server.send(200, "text/html", html);
     }
 
-    void MoonshineWebServer::handleApiState()
+    void moonshine_web_server::handle_api_state()
     {
         Serial.println(F("[WebUI] API: /api/state"));
 
-        if (m_stateGetter) {
-            settings::moonshine::state_t state = m_stateGetter();
-            String json = stateToJson(state);
+        if (m_state_getter) {
+            settings::moonshine::state_t state = m_state_getter();
+            String json = state_to_json(state);
 
             m_server.sendHeader("Content-Type", "application/json");
             m_server.sendHeader("Cache-Control", "no-cache");
@@ -365,11 +391,11 @@ namespace webui
         }
     }
 
-    void MoonshineWebServer::handleApiStatus()
+    void moonshine_web_server::handle_api_status()
     {
         String json = String(F("{\"uptime_ms\":")) + millis() +
-                      String(F(",\"mode\":\"")) + getMode() +
-                      String(F("\",\"ip\":\"")) + getIPAddress() +
+                      String(F(",\"mode\":\"")) + get_mode() +
+                      String(F("\",\"ip\":\"")) + get_ip_address() +
                       String(F("\",\"hostname\":\"")) + m_config.hostname +
                       String(F("\"}"));
 
@@ -377,7 +403,7 @@ namespace webui
         m_server.send(200, "application/json", json);
     }
 
-    String MoonshineWebServer::stateToJson(const settings::moonshine::state_t& state)
+    String moonshine_web_server::state_to_json(const settings::moonshine::state_t& state)
     {
         String json = String(F("{"));
         json += String(F("\"uptime_ms\":")) + String(state.uptime_ms) + String(F(","));

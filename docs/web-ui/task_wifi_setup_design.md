@@ -236,7 +236,7 @@
 
 ```cpp
 namespace etl::wifi {
-    struct config_t {
+    struct server_config_t {
         const char* hostname = "espdevice";           // Имя хоста для mDNS
         const char* ap_ssid = "ESP_Device_AP";        // SSID точки доступа по умолчанию
         const char* ap_password = "password123";      // Пароль точки доступа по умолчанию
@@ -253,6 +253,10 @@ namespace etl::wifi {
 - AP SSID: `"Moonshine_AP"`
 - AP Password: `"moonshine123"`
 - Версия в заголовке: `"Moonshine vX.X.X"` (из `version.h`)
+
+#### 5.2.3 Стиль кодированя
+
+для имен классов, структур и методов использовать snake_style - все буквы строчные с разделителм "_"
 
 #### 5.3 Форматы данных
 

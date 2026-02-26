@@ -120,7 +120,7 @@ void setup() {
     // WEB-UI
     if(use_web_ui)
     {
-      webui::config_t web_config;
+      webui::moonshine_server_config_t web_config;
 
       // Настройка конфигурации веб-сервера
       web_config.hostname = "moonshine";
@@ -133,19 +133,19 @@ void setup() {
       // web_config.wifi_ssid = WIFI_SSID;
       // web_config.wifi_password = WIFI_PASSWORD;
 
-      web_server = etl::make_unique<webui::MoonshineWebServer>(web_config);
+      web_server = etl::make_unique<webui::moonshine_web_server>(web_config);
       if(web_server && web_server->begin()) {
         // Установка функции получения состояния
-        web_server->setStateGetter(get_moonshine_state);
+        web_server->set_state_getter(get_moonshine_state);
 
         // Вывод информации о подключении
         Serial.println(F("\n=== Web Server Info ==="));
         Serial.print(F("Mode: "));
-        Serial.println(web_server->getMode());
+        Serial.println(web_server->get_mode());
         Serial.print(F("IP Address: "));
-        Serial.println(web_server->getIPAddress());
+        Serial.println(web_server->get_ip_address());
         Serial.print(F("Hostname: http://"));
-        Serial.print(web_server->getMode() == "AP" ? web_server->getIPAddress() : "moonshine.local");
+        Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
         Serial.println(F("/"));
         Serial.println(F("=========================\n")); 
       }      
@@ -275,6 +275,6 @@ void loop()
   // Обработка клиентских запросов
   if(web_server)
   {
-    web_server->handleClient();
+    web_server->handle_client();
   }
 }

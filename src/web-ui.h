@@ -21,127 +21,152 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include "settings.h"
+#include "etl_wifi_setup.h"
 
 namespace webui
 {
     /**
-     * @brief Конфигурация веб-сервера
+     * @brief Конфигурация веб-сервера Moonshine
+     *
+     * Наследуется от etl::wifi::server_config_t с проектными значениями по умолчанию.
      */
-    struct config_t
+    struct moonshine_server_config_t : public etl::wifi::server_config_t
     {
-        const char* hostname = "moonshine";           // Имя хоста для mDNS
-        const char* ap_ssid = "Moonshine_AP";         // SSID точки доступа
-        const char* ap_password = "moonshine123";     // Пароль точки доступа
-        const char* wifi_ssid = "";                   // SSID внешней Wi-Fi сети (пусто = только AP)
-        const char* wifi_password = "";               // Пароль внешней Wi-Fi сети
-        uint16_t port = 80;                           // Порт веб-сервера
-        uint32_t update_interval = 500;               // Интервал обновления данных (мс)
+        moonshine_server_config_t()
+        {
+            hostname = "moonshine";              // Имя хоста для mDNS
+            ap_ssid = "Moonshine_AP";            // SSID точки доступа
+            ap_password = "moonshine123";        // Пароль точки доступа
+            wifi_ssid = "";                      // SSID внешней Wi-Fi сети (пусто = только AP)
+            wifi_password = "moonshine123";      // Пароль внешней Wi-Fi сети
+            port = 80;                           // Порт веб-сервера
+            update_interval = 500;               // Интервал обновления данных (мс)
+        }
     };
 
     /**
      * @brief Класс веб-сервера Moonshine
-     * 
+     *
      * Предоставляет веб-интерфейс мониторинга процесса дистилляции.
      * Работает в режиме точки доступа или подключается к существующей Wi-Fi сети.
      */
-    class MoonshineWebServer
+    class moonshine_web_server
     {
     public:
         /**
          * @brief Конструктор
          * @param cfg Конфигурация веб-сервера
          */
-        explicit MoonshineWebServer(const config_t& cfg = config_t());
+        explicit moonshine_web_server(const etl::wifi::server_config_t& cfg = moonshine_server_config_t());
+
+        /**
+         * @brief Деструктор
+         *
+         * Виртуальный деструктор для корректного наследования
+         */
+        virtual ~moonshine_web_server();
 
         /**
          * @brief Инициализация веб-сервера
-         * 
+         *
          * - Настройка сети (AP или STA+AP)
          * - Регистрация обработчиков HTTP
          * - Запуск сервера
-         * 
+         *
          * @return true при успешной инициализации
          */
-        bool begin();
+        virtual bool begin();
 
         /**
          * @brief Основной цикл обработки
-         * 
+         *
          * Вызывать регулярно из loop() для обработки клиентских запросов
          */
-        void handleClient();
+        virtual void handle_client();
+
+        /**
+         * @brief Остановка веб-сервера
+         *
+         * Виртуальный метод для корректного наследования
+         *
+         * - Остановка HTTP сервера
+         * - Отключение mDNS
+         * - Отключение WiFi
+         * - Сброс флага инициализации
+         */
+        virtual void stop();
 
         /**
          * @brief Проверка подключения к сети
          * @return true если подключено (AP или STA)
          */
-        bool isConnected() const;
+        virtual bool is_connected() const;
 
         /**
          * @brief Получить IP адрес
          * @return IP адрес в формате String
          */
-        String getIPAddress() const;
+        virtual String get_ip_address() const;
 
         /**
          * @brief Получить режим работы
          * @return "AP" если только точка доступа, "STA" если клиент, "STA+AP" если оба режима
          */
-        String getMode() const;
+        virtual String get_mode() const;
 
         /**
          * @brief Установить функцию получения состояния системы
          * @param getter Функция, возвращающая settings::moonshine::state_t
          */
-        void setStateGetter(settings::moonshine::state_t (*getter)());
+        virtual void set_state_getter(settings::moonshine::state_t (*getter)());
 
         /**
          * @brief Установить конфигурацию сервера
          * @param cfg Новая конфигурация
          * @note Должно быть вызвано до begin()
          */
-        void setConfig(const config_t& cfg);
+        virtual void set_config(const etl::wifi::server_config_t& cfg);
 
         /**
          * @brief Получить текущую конфигурацию
          * @return Конфигурация сервера
          */
-        const config_t& getConfig() const { return m_config; }
+        virtual const etl::wifi::server_config_t& get_config() const { return m_config; }
 
-    private:
+    protected:
         /**
          * @brief Обработчик корневой страницы
          * Отдаёт HTML страницу веб-интерфейса
          */
-        void handleRoot();
+        virtual void handle_root();
 
         /**
          * @brief Обработчик API состояния
          * Отдаёт JSON с текущими показаниями датчиков
          */
-        void handleApiState();
+        virtual void handle_api_state();
 
         /**
          * @brief Обработчик API статуса
          * Отдаёт JSON со статусом системы (uptime, режим работы и т.д.)
          */
-        void handleApiStatus();
+        virtual void handle_api_status();
 
         /**
          * @brief Генерация JSON из состояния системы
          * @param state Состояние системы
          * @return JSON строка
          */
-        String stateToJson(const settings::moonshine::state_t& state);
+        virtual String state_to_json(const settings::moonshine::state_t& state);
 
-        config_t m_config;                          ///< Конфигурация
+        etl::wifi::server_config_t m_config;        ///< Конфигурация (базовый тип)
         ESP8266WebServer m_server;                  ///< Веб-сервер
-        settings::moonshine::state_t (*m_stateGetter)() = nullptr;  ///< Функция получения состояния
+        settings::moonshine::state_t (*m_state_getter)() = nullptr;  ///< Функция получения состояния
         bool m_initialized = false;                 ///< Флаг инициализации
     };
 
-    // Глобальный экземпляр сервера (опционально)
-    extern MoonshineWebServer server;
+    // Глобальный тип для удобства
+    using MoonshineWebServer = moonshine_web_server;
 
 } // namespace webui
 
@@ -154,33 +179,33 @@ namespace webui
  * // Функция получения состояния (реализовать в main.cpp)
  * settings::moonshine::state_t get_state();
  *
- * webui::MoonshineWebServer webServer;
- * webui::config_t webConfig;
+ * webui::moonshine_web_server web_server;
+ * webui::moonshine_server_config_t web_config;
  *
  * void setup() {
  *     Serial.begin(115200);
  *
  *     // Настройка конфигурации
- *     webConfig.hostname = "moonshine";
- *     webConfig.ap_ssid = "Moonshine_AP";
- *     webConfig.ap_password = "moonshine123";
- *     webConfig.wifi_ssid = "MyWiFi";           // опционально
- *     webConfig.wifi_password = "MyPassword";   // опционально
+ *     web_config.hostname = "moonshine";
+ *     web_config.ap_ssid = "Moonshine_AP";
+ *     web_config.ap_password = "moonshine123";
+ *     web_config.wifi_ssid = "MyWiFi";           // опционально
+ *     web_config.wifi_password = "MyPassword";   // опционально
  *
  *     // Установка конфигурации и инициализация
- *     webServer.setConfig(webConfig);
- *     if (webServer.begin()) {
+ *     web_server.set_config(web_config);
+ *     if (web_server.begin()) {
  *         Serial.println("Web server started");
  *         Serial.print("IP: ");
- *         Serial.println(webServer.getIPAddress());
+ *         Serial.println(web_server.get_ip_address());
  *     }
  *
  *     // Установка функции получения состояния
- *     webServer.setStateGetter(get_state);
+ *     web_server.set_state_getter(get_state);
  * }
  *
  * void loop() {
- *     webServer.handleClient();
+ *     web_server.handle_client();
  *     // ... остальная логика
  * }
  * @endcode
