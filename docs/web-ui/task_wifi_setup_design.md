@@ -287,25 +287,93 @@ window.deviceConfig = {
 
 #### 5.2.1 Структура конфигурации (для библиотеки ETL)
 
+**Файл:** `src/etl_wifi_setup.h`
+
 ```cpp
 namespace etl::wifi {
     struct server_config_t {
-        const char* hostname = "espdevice";           // Имя хоста для mDNS
-        const char* ap_ssid = "ESP_Device_AP";        // SSID точки доступа по умолчанию
-        const char* ap_password = "password123";      // Пароль точки доступа по умолчанию
-        const char* sta_ssid = "";                    // SSID внешней сети (пусто = не подключено)
-        const char* sta_password = "";                // Пароль внешней сети
-        uint16_t port = 80;                           // Порт веб-сервера
+        String hostname = "espdevice";              // Имя хоста для mDNS
+        String ap_ssid = "ESP_Device_AP";           // SSID точки доступа по умолчанию
+        String ap_password = "password123";         // Пароль точки доступа по умолчанию
+        String sta_ssid = "";                       // SSID внешней сети (пусто = не подключено)
+        String sta_password = "";                   // Пароль внешней сети
+        uint16_t port = 80;                         // Порт веб-сервера
+        uint32_t update_interval = 500;             // Интервал обновления данных (мс)
+    };
+
+    struct scan_result_t {
+        String ssid;                                // SSID сети
+        int32_t rssi;                               // Уровень сигнала (dBm)
+        String encryption;                          // Тип шифрования (WPA2, WPA, Open)
+        uint8_t channel;                            // Канал
+    };
+
+    enum class connection_status_t {
+        disconnected,                               // Не подключено
+        connecting,                                 // Подключение
+        connected,                                  // Подключено
+        error                                       // Ошибка
+    };
+
+    class wifi_setup {
+    public:
+        explicit wifi_setup(const server_config_t& cfg = server_config_t());
+        virtual ~wifi_setup();
+
+        virtual bool begin();                       // Инициализация WiFi сервера
+        virtual void stop();                        // Остановка и освобождение ресурсов
+        virtual void handle();                      // Основной цикл обработки
+
+        virtual bool is_initialized() const;        // Проверка инициализации
+        virtual connection_status_t get_connection_status() const;
+        virtual bool is_connected() const;
+
+        virtual String get_ip_address() const;
+        virtual String get_mode() const;
+
+        virtual int32_t scan_networks(std::vector<scan_result_t>& results);
+        virtual bool connect_to_network(const String& ssid, const String& password, uint32_t timeout = 10000);
+        virtual void disconnect();
+
+        virtual bool save_settings();               // Сохранение настроек в LittleFS
+        virtual bool load_settings();               // Загрузка настроек из LittleFS
+        virtual bool reset_settings();              // Сброс настроек к заводским
+
+        virtual void set_config(const server_config_t& cfg);
+        virtual const server_config_t& get_config() const;
+
+        virtual void reboot();                      // Перезагрузка устройства
+
+    protected:
+        // Защищённые методы для наследования
+        virtual bool start_ap();
+        virtual bool connect_to_sta(uint32_t timeout);
+        virtual void update_connection_status();
+        virtual String get_encryption_type(uint8_t type) const;
     };
 }
 ```
 
+**Методы:**
+
+| Метод | Описание |
+|-------|----------|
+| `begin()` | Инициализация: загрузка настроек, попытка подключения к STA, запуск AP |
+| `stop()` | Остановка: отключение от WiFi, остановка AP, сброс флага инициализации |
+| `handle()` | Вызывать в loop() для обновления статуса подключения |
+| `scan_networks()` | Сканирование сетей, возврат отсортированного списка по RSSI |
+| `connect_to_network()` | Подключение к сети с сохранением настроек |
+| `save_settings()` | Сохранение настроек в LittleFS (/wifi_settings.conf) |
+| `load_settings()` | Загрузка настроек из LittleFS |
+| `reset_settings()` | Удаление файла настроек, сброс к значениям по умолчанию |
+| `reboot()` | Перезагрузка устройства через ESP.reset() |
+
 **Примечание для проекта Moonshine:**
-- В проекте `Moonshine` структура конфигурации будет переопределена через `settings.h`
+- В проекте `Moonshine` структура конфигурации будет переопределена через `moonshine_server_config_t`
 - Имя хоста: `"moonshine"`
 - AP SSID: `"Moonshine_AP"`
 - AP Password: `"moonshine123"`
-- Версия в заголовке: `"Moonshine vX.X.X"` (из `version.h`)
+- Веб-сервер запускается вручную через `moonshine_web_server::begin()`
 
 #### 5.2.3 Стиль кодированя
 
