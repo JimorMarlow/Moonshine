@@ -81,6 +81,16 @@ namespace etl
             m_server->begin();
             Serial.print(F("[WiFiSetup] HTTP server started on port "));
             Serial.println(m_config.port);
+
+            // mDNS
+            if (MDNS.begin(m_config.hostname.c_str())) {
+                Serial.print(F("[WiFiSetup] mDNS: http://"));
+                Serial.print(m_config.hostname);
+                Serial.println(F(".local"));
+                MDNS.addService("http", "tcp", m_config.port);
+            } else {
+                Serial.println(F("[WiFiSetup] mDNS failed"));
+            }
         }
 
         void server_setup::stop()
@@ -90,6 +100,9 @@ namespace etl
             }
 
             Serial.println(F("[WiFiSetup] Stopping..."));
+
+            // Остановка mDNS
+            MDNS.end();
 
             // Остановка HTTP сервера
             if (m_server != nullptr) {
@@ -126,6 +139,7 @@ namespace etl
         void server_setup::handle_client()
         {
             if (m_server != nullptr) {
+                MDNS.update();
                 m_server->handleClient();
             }
         }
