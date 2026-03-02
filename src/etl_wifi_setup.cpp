@@ -68,11 +68,8 @@ namespace etl
         {
             Serial.println(F("[WiFiSetup] Starting HTTP server..."));
 
-            if (m_server != nullptr) {
-                delete m_server;
-            }
-
-            m_server = new ESP8266WebServer(m_config.port);
+            // Создание сервера через shared_ptr
+            m_server = etl::make_shared<ESP8266WebServer>(m_config.port);
 
             // Настройка роутинга
             setup_http_routes();
@@ -104,11 +101,10 @@ namespace etl
             // Остановка mDNS
             MDNS.end();
 
-            // Остановка HTTP сервера
-            if (m_server != nullptr) {
+            // Остановка HTTP сервера (shared_ptr автоматически освободит ресурсы)
+            if (m_server) {
                 m_server->stop();
-                delete m_server;
-                m_server = nullptr;
+                m_server.reset();
             }
 
             // Отключение от WiFi

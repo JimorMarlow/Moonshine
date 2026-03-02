@@ -22,6 +22,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
+#include <etl/etl_memory.h>
 
 namespace etl
 {
@@ -214,7 +215,7 @@ namespace etl
             virtual void handle_client();
 
         protected:
-            ESP8266WebServer* m_server = nullptr;       ///< HTTP сервер
+            etl::shared_ptr<ESP8266WebServer> m_server; ///< HTTP сервер
             std::vector<scan_result_t> m_scan_cache;    ///< Кэш результатов сканирования
             uint32_t m_scan_timestamp = 0;              ///< Время последнего сканирования
             static const uint32_t SCAN_CACHE_TIME = 30000;  ///< Время кэширования сканирования (30 сек)
