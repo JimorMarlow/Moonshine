@@ -16,17 +16,17 @@ namespace etl
         static const char* WIFI_SETTINGS_FILE = "/wifi_settings.conf";
         static const uint32_t WIFI_CONNECT_TIMEOUT = 10000;  // 10 секунд
 
-        wifi_setup::wifi_setup(const server_config_t& cfg)
+        server_setup::server_setup(const server_config_t& cfg)
             : m_config(cfg)
         {
         }
 
-        wifi_setup::~wifi_setup()
+        server_setup::~server_setup()
         {
             stop();
         }
 
-        bool wifi_setup::begin()
+        bool server_setup::begin()
         {
             Serial.println(F("[WiFiSetup] Initializing..."));
 
@@ -61,7 +61,7 @@ namespace etl
             return false;
         }
 
-        void wifi_setup::stop()
+        void server_setup::stop()
         {
             if (!m_initialized) {
                 return;
@@ -84,7 +84,7 @@ namespace etl
             Serial.println(F("[WiFiSetup] Stopped"));
         }
 
-        void wifi_setup::handle()
+        void server_setup::handle()
         {
             if (!m_initialized) {
                 return;
@@ -94,22 +94,22 @@ namespace etl
             update_connection_status();
         }
 
-        bool wifi_setup::is_initialized() const
+        bool server_setup::is_initialized() const
         {
             return m_initialized;
         }
 
-        connection_status_t wifi_setup::get_connection_status() const
+        connection_status_t server_setup::get_connection_status() const
         {
             return m_connection_status;
         }
 
-        bool wifi_setup::is_connected() const
+        bool server_setup::is_connected() const
         {
             return WiFi.status() == WL_CONNECTED;
         }
 
-        String wifi_setup::get_ip_address() const
+        String server_setup::get_ip_address() const
         {
             if (WiFi.status() == WL_CONNECTED) {
                 return WiFi.localIP().toString();
@@ -117,7 +117,7 @@ namespace etl
             return WiFi.softAPIP().toString();
         }
 
-        String wifi_setup::get_mode() const
+        String server_setup::get_mode() const
         {
             WiFiMode_t mode = WiFi.getMode();
             switch (mode) {
@@ -128,7 +128,7 @@ namespace etl
             }
         }
 
-        int32_t wifi_setup::scan_networks(std::vector<scan_result_t>& results)
+        int32_t server_setup::scan_networks(std::vector<scan_result_t>& results)
         {
             Serial.println(F("[WiFiSetup] Scanning networks..."));
 
@@ -177,7 +177,7 @@ namespace etl
             return count;
         }
 
-        bool wifi_setup::connect_to_network(const String& ssid, const String& password, uint32_t timeout)
+        bool server_setup::connect_to_network(const String& ssid, const String& password, uint32_t timeout)
         {
             Serial.print(F("[WiFiSetup] Connecting to network: "));
             Serial.println(ssid);
@@ -189,7 +189,7 @@ namespace etl
             return connect_to_sta(timeout);
         }
 
-        void wifi_setup::disconnect()
+        void server_setup::disconnect()
         {
             Serial.println(F("[WiFiSetup] Disconnecting..."));
 
@@ -197,7 +197,7 @@ namespace etl
             m_connection_status = connection_status_t::disconnected;
         }
 
-        bool wifi_setup::save_settings()
+        bool server_setup::save_settings()
         {
             Serial.println(F("[WiFiSetup] Saving settings..."));
 
@@ -229,7 +229,7 @@ namespace etl
             return true;
         }
 
-        bool wifi_setup::load_settings()
+        bool server_setup::load_settings()
         {
             if (!LittleFS.begin()) {
                 Serial.println(F("[WiFiSetup] Failed to mount LittleFS"));
@@ -289,7 +289,7 @@ namespace etl
             return true;
         }
 
-        bool wifi_setup::reset_settings()
+        bool server_setup::reset_settings()
         {
             Serial.println(F("[WiFiSetup] Resetting settings..."));
 
@@ -315,19 +315,19 @@ namespace etl
             return true;
         }
 
-        void wifi_setup::set_config(const server_config_t& cfg)
+        void server_setup::set_config(const server_config_t& cfg)
         {
             m_config = cfg;
         }
 
-        void wifi_setup::reboot()
+        void server_setup::reboot()
         {
             Serial.println(F("[WiFiSetup] Rebooting..."));
             delay(100);
             ESP.reset();
         }
 
-        bool wifi_setup::start_ap()
+        bool server_setup::start_ap()
         {
             Serial.print(F("[WiFiSetup] Starting AP: "));
             Serial.println(m_config.ap_ssid);
@@ -348,7 +348,7 @@ namespace etl
             return true;
         }
 
-        bool wifi_setup::connect_to_sta(uint32_t timeout)
+        bool server_setup::connect_to_sta(uint32_t timeout)
         {
             if (m_config.wifi_ssid.length() == 0) {
                 Serial.println(F("[WiFiSetup] No SSID configured"));
@@ -390,7 +390,7 @@ namespace etl
             return false;
         }
 
-        void wifi_setup::update_connection_status()
+        void server_setup::update_connection_status()
         {
             wl_status_t status = WiFi.status();
 
@@ -414,7 +414,7 @@ namespace etl
             }
         }
 
-        String wifi_setup::get_encryption_type(uint8_t type) const
+        String server_setup::get_encryption_type(uint8_t type) const
         {
             switch (type) {
                 case ENC_TYPE_NONE:

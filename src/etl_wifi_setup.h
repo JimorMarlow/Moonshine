@@ -68,14 +68,14 @@ namespace etl
          * Предоставляет функционал для первичной настройки WiFi подключения.
          * Работает в режиме точки доступа или подключается к внешней сети.
          */
-        class wifi_setup
+        class server_setup
         {
         public:
             /**
              * @brief Конструктор
              * @param cfg Конфигурация WiFi сервера
              */
-            explicit wifi_setup(const server_config_t& cfg = server_config_t());
+            explicit server_setup(const server_config_t& cfg = server_config_t());
 
             /**
              * @brief Деструктор
@@ -83,7 +83,7 @@ namespace etl
              * Виртуальный деструктор для корректного наследования.
              * Вызывает stop() для освобождения ресурсов.
              */
-            virtual ~wifi_setup();
+            virtual ~server_setup();
 
             /**
              * @brief Инициализация WiFi сервера
@@ -240,7 +240,7 @@ namespace etl
  * #include "etl_wifi_setup.h"
  *
  * // Глобальный экземпляр
- * etl::wifi::wifi_setup wifi_server;
+ * etl::wifi::server_setup wifi_server;
  * etl::wifi::server_config_t wifi_config;
  *
  * void setup() {
