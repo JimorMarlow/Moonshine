@@ -520,11 +520,11 @@ namespace etl
 
         void server_setup::send_scan_response()
         {
-            StaticJsonDocument<2048> doc;
-            JsonArray networks = doc.createNestedArray("networks");
+            JsonDocument doc;
+            JsonArray networks = doc["networks"].to<JsonArray>();
 
             for (const auto& network : m_scan_cache) {
-                JsonObject net = networks.createNestedObject();
+                JsonObject net = networks.add<JsonObject>();
                 net["ssid"] = network.ssid;
                 net["rssi"] = network.rssi;
                 net["encryption"] = network.encryption;
@@ -542,7 +542,7 @@ namespace etl
 
             if (m_server->hasArg("plain")) {
                 String body = m_server->arg("plain");
-                StaticJsonDocument<512> doc;
+                JsonDocument doc;
                 DeserializationError error = deserializeJson(doc, body);
 
                 if (error) {
@@ -573,7 +573,7 @@ namespace etl
 
         void server_setup::handle_api_status()
         {
-            StaticJsonDocument<512> doc;
+            JsonDocument doc;
             doc["connected"] = is_connected();
             doc["ssid"] = m_config.wifi_ssid;
             doc["ip"] = get_ip_address();
@@ -619,7 +619,7 @@ namespace etl
 
             if (m_server->hasArg("plain")) {
                 String body = m_server->arg("plain");
-                StaticJsonDocument<512> doc;
+                JsonDocument doc;
                 DeserializationError error = deserializeJson(doc, body);
 
                 if (error) {
@@ -656,7 +656,7 @@ namespace etl
 
         void server_setup::send_success_response(const String& message, const String& extra_data)
         {
-            StaticJsonDocument<256> doc;
+            JsonDocument doc;
             doc["success"] = true;
             doc["message"] = message;
             if (extra_data.length() > 0) {
@@ -670,7 +670,7 @@ namespace etl
 
         void server_setup::send_error_response(const String& message)
         {
-            StaticJsonDocument<256> doc;
+            JsonDocument doc;
             doc["success"] = false;
             doc["message"] = message;
 
