@@ -21,6 +21,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include "settings.h"
+#include "version.h"
 #include "etl_wifi_setup.h"
 
 namespace webui
@@ -41,6 +42,13 @@ namespace webui
             wifi_password = "moonshine123";      // Пароль внешней Wi-Fi сети
             port = 80;                           // Порт веб-сервера
             update_interval = 500;               // Интервал обновления данных (мс)
+
+            device_name = "Moonshine v" + String(MS_VERSION_STRING);   // Название устройства
+            device_description = "Контроль температуры дистилляционной колонны на базе ESP8266";  // Описание
+            
+            // SVG иконка устройства (из docs/images/icon_moonshine.svg)
+            // Упрощённая иконка для встраивания в прошивку
+            device_icon_svg = F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 33.6 39.7\"><rect width=\"33.6\" height=\"39.7\" fill=\"#a2d6fd\" rx=\"4\"/><circle cx=\"16.8\" cy=\"12\" r=\"5\" fill=\"#1d436d\"/><path d=\"M16.8 18v14M12 25h9.6\" stroke=\"#1d436d\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"16.8\" cy=\"32\" r=\"2.5\" fill=\"#1d436d\"/></svg>");
         }
     };
 

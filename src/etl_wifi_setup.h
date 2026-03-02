@@ -11,14 +11,15 @@
  * - Подключение к выбранной сети
  * - Сохранение настроек в энергонезависимой памяти
  * - Сброс к заводским настройкам
+ * - Встроенный HTTP сервер с веб-интерфейсом
  *
- * @note Класс предоставляет только серверную часть для настройки WiFi.
- *       Веб-интерфейс должен быть реализован отдельно.
+ * @note Класс предоставляет серверную часть для настройки WiFi с веб-интерфейсом.
  */
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <ArduinoJson.h>
 
 namespace etl
 {
@@ -38,6 +39,11 @@ namespace etl
             String wifi_password = "";                   // Пароль внешней сети
             uint16_t port = 80;                         // Порт веб-сервера
             uint32_t update_interval = 500;             // Интервал обновления данных (мс)
+            
+            // Конфигурация веб-интерфейса
+            String device_name = "ESP Device v1.0.0";   // Название устройства
+            String device_description = "Smart home device based on ESP8266/ESP32";  // Описание
+            String device_icon_svg = "";                // SVG иконка устройства (опционально)
         };
 
         /**
@@ -199,10 +205,22 @@ namespace etl
              */
             virtual void reboot();
 
+            /**
+             * @brief Обработка HTTP запросов сервера
+             * @note Вызывать из loop() вместе с handle()
+             */
+            virtual void handle_client();
+
         protected:
-            server_config_t m_config;                   ///< Конфигурация
-            bool m_initialized = false;                 ///< Флаг инициализации
-            connection_status_t m_connection_status = connection_status_t::disconnected;  ///< Статус подключения
+            ESP8266WebServer* m_server = nullptr;       ///< HTTP сервер
+            std::vector<scan_result_t> m_scan_cache;    ///< Кэш результатов сканирования
+            uint32_t m_scan_timestamp = 0;              ///< Время последнего сканирования
+            static const uint32_t SCAN_CACHE_TIME = 30000;  ///< Время кэширования сканирования (30 сек)
+
+            /**
+             * @brief Запуск HTTP сервера
+             */
+            virtual void start_http_server();
 
             /**
              * @brief Запуск точки доступа
@@ -228,6 +246,80 @@ namespace etl
              * @return Строковое представление типа шифрования
              */
             virtual String get_encryption_type(uint8_t type) const;
+
+            /**
+             * @brief Настройка HTTP роутинга
+             */
+            virtual void setup_http_routes();
+
+            /**
+             * @brief Обработчик главной страницы
+             */
+            virtual void handle_root();
+
+            /**
+             * @brief Обработчик API сканирования сетей
+             */
+            virtual void handle_api_scan();
+
+            /**
+             * @brief Обработчик API подключения
+             */
+            virtual void handle_api_connect();
+
+            /**
+             * @brief Обработчик API статуса
+             */
+            virtual void handle_api_status();
+
+            /**
+             * @brief Обработчик API сохранения настроек
+             */
+            virtual void handle_api_save();
+
+            /**
+             * @brief Обработчик API сброса настроек
+             */
+            virtual void handle_api_reset();
+
+            /**
+             * @brief Обработчик API настройки точки доступа
+             */
+            virtual void handle_api_ap_settings();
+
+            /**
+             * @brief Получить SVG иконку устройства
+             * @return SVG строка или иконка по умолчанию
+             */
+            virtual String get_device_icon() const;
+
+            /**
+             * @brief Отправить ответ с результатами сканирования
+             */
+            virtual void send_scan_response();
+
+            /**
+             * @brief Отправить успешный ответ
+             * @param message Сообщение
+             * @param extra_data Дополнительные данные
+             */
+            virtual void send_success_response(const String& message, const String& extra_data = "");
+
+            /**
+             * @brief Отправить ответ с ошибкой
+             * @param message Сообщение об ошибке
+             */
+            virtual void send_error_response(const String& message);
+
+            /**
+             * @brief Получить HTML страницу настройки WiFi
+             * @return HTML строка
+             */
+            virtual String get_wifi_setup_html() const;
+
+            server_config_t m_config;                   ///< Конфигурация
+            bool m_initialized = false;                 ///< Флаг инициализации
+            connection_status_t m_connection_status = connection_status_t::disconnected;  ///< Статус подключения
         };
 
     } // namespace wifi
@@ -251,6 +343,12 @@ namespace etl
  *     wifi_config.ap_ssid = "Moonshine_AP";
  *     wifi_config.ap_password = "moonshine123";
  *
+ *     // Настройка веб-интерфейса
+ *     wifi_config.device_name = "Moonshine v1.2.13";
+ *     wifi_config.device_description = "Устройство для контроля температуры";
+ *     // Опционально: кастомная SVG иконка
+ *     // wifi_config.device_icon_svg = "<svg>...</svg>";
+ *
  *     // Попытка загрузки сохранённых настроек
  *     if (wifi_server.load_settings()) {
  *         // Настройки загружены, пробуем подключиться
@@ -271,6 +369,9 @@ namespace etl
  * void loop() {
  *     // Обработка событий WiFi
  *     wifi_server.handle();
+ *
+ *     // Обработка HTTP запросов
+ *     wifi_server.handle_client();
  *
  *     // Проверка статуса подключения
  *     if (wifi_server.is_connected()) {

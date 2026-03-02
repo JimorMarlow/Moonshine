@@ -6,6 +6,7 @@
  */
 
 #include "etl_wifi_setup.h"
+#include "etl_wifi_setup_html.h"
 #include <LittleFS.h>
 
 namespace etl
@@ -42,6 +43,7 @@ namespace etl
                     if (connect_to_sta(WIFI_CONNECT_TIMEOUT)) {
                         Serial.println(F("[WiFiSetup] Connected to saved network"));
                         m_initialized = true;
+                        start_http_server();
                         return true;
                     } else {
                         Serial.println(F("[WiFiSetup] Failed to connect to saved network"));
@@ -54,11 +56,31 @@ namespace etl
             if (start_ap()) {
                 Serial.println(F("[WiFiSetup] AP started successfully"));
                 m_initialized = true;
+                start_http_server();
                 return true;
             }
 
             Serial.println(F("[WiFiSetup] Failed to start AP"));
             return false;
+        }
+
+        void server_setup::start_http_server()
+        {
+            Serial.println(F("[WiFiSetup] Starting HTTP server..."));
+
+            if (m_server != nullptr) {
+                delete m_server;
+            }
+
+            m_server = new ESP8266WebServer(m_config.port);
+
+            // Настройка роутинга
+            setup_http_routes();
+
+            // Запуск сервера
+            m_server->begin();
+            Serial.print(F("[WiFiSetup] HTTP server started on port "));
+            Serial.println(m_config.port);
         }
 
         void server_setup::stop()
@@ -68,6 +90,13 @@ namespace etl
             }
 
             Serial.println(F("[WiFiSetup] Stopping..."));
+
+            // Остановка HTTP сервера
+            if (m_server != nullptr) {
+                m_server->stop();
+                delete m_server;
+                m_server = nullptr;
+            }
 
             // Отключение от WiFi
             WiFi.disconnect(true);
@@ -92,6 +121,13 @@ namespace etl
 
             // Обновление статуса подключения
             update_connection_status();
+        }
+
+        void server_setup::handle_client()
+        {
+            if (m_server != nullptr) {
+                m_server->handleClient();
+            }
         }
 
         bool server_setup::is_initialized() const
@@ -430,6 +466,233 @@ namespace etl
                 default:
                     return "Unknown";
             }
+        }
+
+        String server_setup::get_device_icon() const
+        {
+            if (m_config.device_icon_svg.length() > 0) {
+                return m_config.device_icon_svg;
+            }
+
+            // Иконка умного устройства по умолчанию
+            return F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><path d=\"M 256 0 C 114.6 0 0 114.6 0 256 S 114.6 512 256 512 S 512 397.4 512 256 S 397.4 0 256 0 Z M 256 480 C 132.3 480 32 379.7 32 256 S 132.3 32 256 32 S 480 132.3 480 256 S 379.7 480 256 480 Z\" fill=\"#007AFF\"/><path d=\"M 256 128 C 203.1 128 160 171.1 160 224 V 320 C 160 353.1 186.9 380 220 380 H 292 C 325.1 380 352 353.1 352 320 V 224 C 352 171.1 308.9 128 256 128 Z M 320 320 C 320 335.4 307.4 348 292 348 H 220 C 204.6 348 192 335.4 192 320 V 224 C 192 188.8 220.8 160 256 160 S 320 188.8 320 224 V 320 Z\" fill=\"#007AFF\"/><circle cx=\"256\" cy=\"256\" r=\"48\" fill=\"#007AFF\"/></svg>");
+        }
+
+        void server_setup::handle_root()
+        {
+            String html = get_wifi_setup_html();
+            m_server->send(200, "text/html", html);
+        }
+
+        void server_setup::handle_api_scan()
+        {
+            Serial.println(F("[WiFiSetup] API: /api/scan"));
+
+            // Проверка кэша
+            uint32_t current_time = millis();
+            if (m_scan_cache.size() > 0 && (current_time - m_scan_timestamp) < SCAN_CACHE_TIME) {
+                Serial.println(F("[WiFiSetup] Returning cached scan results"));
+                send_scan_response();
+                return;
+            }
+
+            // Сканирование сетей
+            m_scan_cache.clear();
+            scan_networks(m_scan_cache);
+            m_scan_timestamp = current_time;
+
+            send_scan_response();
+        }
+
+        void server_setup::send_scan_response()
+        {
+            StaticJsonDocument<2048> doc;
+            JsonArray networks = doc.createNestedArray("networks");
+
+            for (const auto& network : m_scan_cache) {
+                JsonObject net = networks.createNestedObject();
+                net["ssid"] = network.ssid;
+                net["rssi"] = network.rssi;
+                net["encryption"] = network.encryption;
+                net["channel"] = network.channel;
+            }
+
+            String response;
+            serializeJson(doc, response);
+            m_server->send(200, "application/json", response);
+        }
+
+        void server_setup::handle_api_connect()
+        {
+            Serial.println(F("[WiFiSetup] API: /api/connect"));
+
+            if (m_server->hasArg("plain")) {
+                String body = m_server->arg("plain");
+                StaticJsonDocument<512> doc;
+                DeserializationError error = deserializeJson(doc, body);
+
+                if (error) {
+                    send_error_response("Invalid JSON");
+                    return;
+                }
+
+                String ssid = doc["ssid"].as<String>();
+                String password = doc["password"].as<String>();
+
+                if (ssid.length() == 0) {
+                    send_error_response("SSID is required");
+                    return;
+                }
+
+                // Подключение к сети
+                bool success = connect_to_network(ssid, password);
+
+                if (success) {
+                    send_success_response("Connected", get_ip_address());
+                } else {
+                    send_error_response("Connection failed");
+                }
+            } else {
+                send_error_response("No data provided");
+            }
+        }
+
+        void server_setup::handle_api_status()
+        {
+            StaticJsonDocument<512> doc;
+            doc["connected"] = is_connected();
+            doc["ssid"] = m_config.wifi_ssid;
+            doc["ip"] = get_ip_address();
+            doc["rssi"] = WiFi.RSSI();
+            doc["mode"] = get_mode();
+
+            String response;
+            serializeJson(doc, response);
+            m_server->send(200, "application/json", response);
+        }
+
+        void server_setup::handle_api_save()
+        {
+            Serial.println(F("[WiFiSetup] API: /api/save"));
+
+            bool success = save_settings();
+
+            if (success) {
+                send_success_response("Settings saved");
+            } else {
+                send_error_response("Failed to save settings");
+            }
+        }
+
+        void server_setup::handle_api_reset()
+        {
+            Serial.println(F("[WiFiSetup] API: /api/reset"));
+
+            bool success = reset_settings();
+
+            if (success) {
+                send_success_response("Settings reset. Rebooting...");
+                delay(1000);
+                reboot();
+            } else {
+                send_error_response("Failed to reset settings");
+            }
+        }
+
+        void server_setup::handle_api_ap_settings()
+        {
+            Serial.println(F("[WiFiSetup] API: /api/ap_settings"));
+
+            if (m_server->hasArg("plain")) {
+                String body = m_server->arg("plain");
+                StaticJsonDocument<512> doc;
+                DeserializationError error = deserializeJson(doc, body);
+
+                if (error) {
+                    send_error_response("Invalid JSON");
+                    return;
+                }
+
+                String ap_ssid = doc["ap_ssid"].as<String>();
+                String ap_password = doc["ap_password"].as<String>();
+
+                if (ap_ssid.length() == 0) {
+                    send_error_response("AP SSID is required");
+                    return;
+                }
+
+                if (ap_password.length() > 0 && ap_password.length() < 8) {
+                    send_error_response("AP password must be at least 8 characters");
+                    return;
+                }
+
+                // Применение настроек AP
+                m_config.ap_ssid = ap_ssid;
+                m_config.ap_password = ap_password;
+
+                // Перезапуск точки доступа
+                WiFi.softAPdisconnect(true);
+                start_ap();
+
+                send_success_response("AP settings applied", m_config.ap_ssid);
+            } else {
+                send_error_response("No data provided");
+            }
+        }
+
+        void server_setup::send_success_response(const String& message, const String& extra_data)
+        {
+            StaticJsonDocument<256> doc;
+            doc["success"] = true;
+            doc["message"] = message;
+            if (extra_data.length() > 0) {
+                doc["data"] = extra_data;
+            }
+
+            String response;
+            serializeJson(doc, response);
+            m_server->send(200, "application/json", response);
+        }
+
+        void server_setup::send_error_response(const String& message)
+        {
+            StaticJsonDocument<256> doc;
+            doc["success"] = false;
+            doc["message"] = message;
+
+            String response;
+            serializeJson(doc, response);
+            m_server->send(200, "application/json", response);
+        }
+
+        String server_setup::get_wifi_setup_html() const
+        {
+            return get_wifi_setup_html_content(
+                m_config.device_name,
+                m_config.device_description,
+                m_config.device_icon_svg
+            );
+        }
+
+        void server_setup::setup_http_routes()
+        {
+            Serial.println(F("[WiFiSetup] Setting up HTTP routes..."));
+
+            // Главная страница
+            m_server->on("/", HTTP_GET, [this]() { handle_root(); });
+
+            // API endpoints
+            m_server->on("/api/scan", HTTP_GET, [this]() { handle_api_scan(); });
+            m_server->on("/api/connect", HTTP_POST, [this]() { handle_api_connect(); });
+            m_server->on("/api/status", HTTP_GET, [this]() { handle_api_status(); });
+            m_server->on("/api/save", HTTP_POST, [this]() { handle_api_save(); });
+            m_server->on("/api/reset", HTTP_POST, [this]() { handle_api_reset(); });
+            m_server->on("/api/ap_settings", HTTP_POST, [this]() { handle_api_ap_settings(); });
+
+            // Обработчик для остальных путей - 404
+            m_server->onNotFound([this]() {
+                m_server->send(404, "text/plain", "Not Found");
+            });
         }
 
     } // namespace wifi
