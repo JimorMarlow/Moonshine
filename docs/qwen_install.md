@@ -130,6 +130,21 @@ Select Qwen OAuth (Free) authentication and follow the prompts to log in. Then l
 
 [Интеграция coding-агента с MCP-сервером Idea](https://habr.com/ru/articles/989716/)
 
+### IntelliJ IDEA ACP agent
+1. Открываем AI Chat (устанавливаем плагин, если еще не установлен).
+2. Нажимаем 3 точки, выбираем пункт `Add Custom Agent` (в общих настройках `Tools -> AI Assistant -> Agents`)
+3. Выбираем из списка `Qwen Code` и устанавливаем. Так же можно установить любой другой, например `Kimi`
+4. В окне чата внизу выбираем `Qwen Code`
+
+[Официальная документация Qwen Code JetBrains IDEs](https://qwenlm.github.io/qwen-code-docs/en/users/integration-jetbrains/)
+
+#### Troubleshooting
+
+Если в процессе работы возникает ошибка `Failed to initialize ACP process. Process terminated with exit code: 134`, проверьте что в системе корректно работает `nodejs` запустив команду `node -v`. Если не запускается, переустановите `nodejs` или сбоящую библиотеку.
+
+##### macOS
+```brew reinstall node``` 
+
 ---
 
 ### Шаг 4: Настройка после установки
