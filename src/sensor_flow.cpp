@@ -12,6 +12,9 @@ bool flow_sensor_t::init(etl::weak_ptr<flow_sensor_t> instance)
     reset();
     pinMode(pin, INPUT_PULLUP); // Настройка пина с подтяжкой к 3.3V
     // attachInterrupt ...
+
+    samples_flow.clear();    // Сброс очереди
+
     return true;
 }
 
@@ -25,18 +28,19 @@ void flow_sensor_t::reset()   // сбросить все счетчики
 
 bool flow_sensor_t::tick()
 {
-    if(pulse_count > 0)
+    const int add_pulses = pulse_count; pulse_count = 0;    // time critical place
+    if(add_pulses > 0)
     {
-        total_count += pulse_count;
-        pulse_count = 0;
-        return true;
+        total_count += add_pulses;
+        
+        return update_minute_flow_rate(add_pulses);;
     }
     if(is_modified)
     {
         is_modified = false;
         return true;
     }
-    return false;
+    return update_minute_flow_rate(add_pulses);
 }
 
  void flow_sensor_t::pulse()
@@ -64,11 +68,11 @@ String flow_sensor_t::get_spinner_state() // текущее состояние �
 void flow_sensor_t::set_calibrate(bool start)
 {
     if(start){
-        _start = sample_t{total_count, millis()};
+        _start = sample_t{millis(), total_count};
         _stop.reset();
     }
     else{
-        _stop = sample_t{total_count, millis()};
+        _stop = sample_t{millis(), total_count};
     }
     is_modified = true;
 }
@@ -84,11 +88,11 @@ etl::optional<flow_sensor_t::sample_t> flow_sensor_t::get_calibrate()
     {
         if(_stop)
         {
-            value = sample_t{_stop->count - _start->count, _stop->ms - _start->ms};
+            value = sample_t{_stop->ts - _start->ts, _stop->count - _start->count};
         }
         else
         {
-            value = sample_t{total_count - _start->count, millis() - _start->ms};
+            value = sample_t{millis() - _start->ts, total_count - _start->count};
         }
     }
     return value;
@@ -99,7 +103,7 @@ String flow_sensor_t::format_calibrate_data(etl::optional<flow_sensor_t::sample_
     if(value)
     {
         // Преобразуем миллисекунды в минуты и секунды
-        unsigned long total_seconds = value->ms / 1000;
+        unsigned long total_seconds = value->ts / 1000;
         unsigned long minutes = total_seconds / 60;
         unsigned long seconds = total_seconds % 60;
         
@@ -121,4 +125,37 @@ void flow_sensor_t::reset_calibrate()
 {
     _start.reset();
     _stop.reset();
+}
+
+// Добавить новые отсчеты и рассчитать поток 
+bool  flow_sensor_t::update_minute_flow_rate(int add_pulses)  
+{
+    bool is_changed = false; // Если есть новые или удалили старые
+    
+    auto t_now = millis();
+    while(!samples_flow.empty() && (t_now - samples_flow.front().ts) > samples_flow_interval ) {
+        samples_flow.pop_front();
+        is_changed = true;
+    }
+
+    if(add_pulses > 0)
+    {
+        samples_flow.push(sample_t{t_now, add_pulses});
+        is_changed = true;
+    }
+
+    if(samples_flow.empty())
+    {
+        minute_flow_rate = 0.0; // Нет потока воды
+    }
+    else
+    {
+        // Считаем количество пульсов за последний интервал и переводим в минутный поток жидкости
+        int sum_pulses = 0; 
+        for(auto value : samples_flow) sum_pulses += value.count;
+        float volume_liter = float(sum_pulses) / sensor_info.sample_rate;  // Объем воды за интервал samples_flow_interval
+        minute_flow_rate = volume_liter * 60000.0 / samples_flow_interval; // Переводим в минутный объем 
+    }
+    
+    return is_changed;
 }
