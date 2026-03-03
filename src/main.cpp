@@ -44,9 +44,9 @@ etl::vector<etl::shared_ptr<temperature_sensor_t>> t_sensors
 // Датчики потока воды
 #include "sensor_flow.h"
 // Поток воды на выходе из дефлегматора. Нужен для контроля температуры по расходу воды
-etl::shared_ptr<flow_sensor_t> flow_deflegmator = etl::make_shared<flow_sensor_t>("D", "flow_deflegmator", F_DEFLEGMATOR_WATER_PIN); 
+etl::shared_ptr<flow_sensor_t> flow_deflegmator = etl::make_shared<flow_sensor_SEN_HZ06D>("D", "flow_deflegmator", F_DEFLEGMATOR_WATER_PIN); 
 // Поток воды на выходе из охладителя (конденсатора/холодильника). Нужен для контроля температуры по расходу воды
-etl::shared_ptr<flow_sensor_t> flow_condenser = etl::make_shared<flow_sensor_t>("C", "flow_condenser", F_CONDENSER_WATER_PIN); 
+etl::shared_ptr<flow_sensor_t> flow_condenser = etl::make_shared<flow_sensor_SEN_HZ06D>("C", "flow_condenser", F_CONDENSER_WATER_PIN); 
 etl::vector<etl::shared_ptr<flow_sensor_t>> f_sensors  
 {
   flow_deflegmator, flow_condenser
@@ -73,12 +73,85 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 etl::shared_ptr<Button> btn = etl::make_shared<Button>(TOUCH_BTN_PIN);
 volatile int btn_clicks = 0;  // для проверки нажатий кнопки
 
-
+//////////////////////////////////////////////////////////////
 // WEB-UI
 #include "web-ui.h"
 // Глобальный экземпляр веб-сервера
 etl::unique_ptr<webui::MoonshineWebServer> web_server;
+etl::unique_ptr<etl::wifi::server_setup> wifi_server;
 bool use_web_ui = true;
+
+bool start_web_server() { // Moonshine web-ui
+  // WEB-UI
+  if(use_web_ui)
+  {
+    wifi_server.reset();
+    webui::moonshine_server_config_t web_config;
+    // TODO: load settings
+
+    web_server = etl::make_unique<webui::moonshine_web_server>(web_config);
+    if(web_server && web_server->begin()) {
+      // Установка функции получения состояния
+      web_server->set_state_getter(get_moonshine_state);
+
+      // Вывод информации о подключении
+      Serial.println(F("\n=== Web Server Info ==="));
+      Serial.print(F("Mode: "));
+      Serial.println(web_server->get_mode());
+      Serial.print(F("IP Address: "));
+      Serial.println(web_server->get_ip_address());
+      Serial.print(F("Hostname: http://"));
+      Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
+      Serial.println(F("/"));
+      Serial.println(F("=========================\n")); 
+      return true;
+    }      
+    else {
+      Serial.println(F("[ERROR] Web server initialization failed!"));
+      return false;
+    }    
+  }
+  return false;
+}
+
+bool start_wifi_server() { // WiFi setup
+  // setup available wi-fi points
+  if(use_web_ui)
+  {
+    web_server.reset();
+    webui::moonshine_server_config_t web_config;
+    // TODO: load settings
+
+    wifi_server = etl::make_unique<etl::wifi::server_setup>(web_config);
+    if(wifi_server && wifi_server->begin()) {
+      // Вывод информации о подключении
+      Serial.println(F("\n=== WiFi Server Info ==="));
+      Serial.print(F("Mode: "));
+      Serial.println(web_server->get_mode());
+      Serial.print(F("IP Address: "));
+      Serial.println(web_server->get_ip_address());
+      Serial.print(F("Hostname: http://"));
+      Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
+      Serial.println(F("/"));
+      Serial.println(F("=========================\n")); 
+      return true;
+    }      
+    else {
+      Serial.println(F("[ERROR] WiFi server initialization failed!"));
+      return false;
+    }    
+  }
+  return false;
+}
+
+void toggle_seb_server() {
+  if(web_server) {
+    start_wifi_server();
+  }
+  else {
+    start_web_server();
+  }
+}
 
 ///////////////////////////////////////////
 void setup() {
@@ -130,40 +203,11 @@ void setup() {
 
     ////////////////////////////////////////////////////////////////////////////
     // WEB-UI
-    if(use_web_ui)
-    {
-      webui::moonshine_server_config_t web_config;
 
-      // Настройка конфигурации веб-сервера
-      web_config.hostname = "moonshine";
-      web_config.ap_ssid = "Moonshine_AP";
-      web_config.ap_password = "moonshine123";
-      web_config.port = 80;
-      web_config.update_interval = 500; // 500ms
-
-      // Раскомментировать для подключения к Wi-Fi сети
-      // web_config.wifi_ssid = WIFI_SSID;
-      // web_config.wifi_password = WIFI_PASSWORD;
-
-      web_server = etl::make_unique<webui::moonshine_web_server>(web_config);
-      if(web_server && web_server->begin()) {
-        // Установка функции получения состояния
-        web_server->set_state_getter(get_moonshine_state);
-
-        // Вывод информации о подключении
-        Serial.println(F("\n=== Web Server Info ==="));
-        Serial.print(F("Mode: "));
-        Serial.println(web_server->get_mode());
-        Serial.print(F("IP Address: "));
-        Serial.println(web_server->get_ip_address());
-        Serial.print(F("Hostname: http://"));
-        Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
-        Serial.println(F("/"));
-        Serial.println(F("=========================\n")); 
-      }      
-      else {
-        Serial.println(F("[ERROR] Web server initialization failed!"));
-      }    
+    if(is_btn_hold_on_start) {
+      start_wifi_server();
+    } else {
+      start_web_server();
     }
   }
 
