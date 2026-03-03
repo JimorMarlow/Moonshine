@@ -64,11 +64,11 @@ String flow_sensor_t::get_spinner_state() // текущее состояние �
 void flow_sensor_t::set_calibrate(bool start)
 {
     if(start){
-        _start = calibrate_item_t{total_count, millis()};
+        _start = sample_t{total_count, millis()};
         _stop.reset();
     }
     else{
-        _stop = calibrate_item_t{total_count, millis()};
+        _stop = sample_t{total_count, millis()};
     }
     is_modified = true;
 }
@@ -77,24 +77,24 @@ bool flow_sensor_t::is_calibrate() const
     return _start && !_stop;
 }
 
-etl::optional<flow_sensor_t::calibrate_item_t> flow_sensor_t::get_calibrate()
+etl::optional<flow_sensor_t::sample_t> flow_sensor_t::get_calibrate()
 {
-    etl::optional<calibrate_item_t> value;
+    etl::optional<sample_t> value;
     if(_start)
     {
         if(_stop)
         {
-            value = calibrate_item_t{_stop->count - _start->count, _stop->ms - _start->ms};
+            value = sample_t{_stop->count - _start->count, _stop->ms - _start->ms};
         }
         else
         {
-            value = calibrate_item_t{total_count - _start->count, millis() - _start->ms};
+            value = sample_t{total_count - _start->count, millis() - _start->ms};
         }
     }
     return value;
 }
 
-String flow_sensor_t::format_calibrate_data(etl::optional<flow_sensor_t::calibrate_item_t> value)
+String flow_sensor_t::format_calibrate_data(etl::optional<flow_sensor_t::sample_t> value)
 {
     if(value)
     {
