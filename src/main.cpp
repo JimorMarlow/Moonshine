@@ -180,11 +180,11 @@ void setup() {
 
     // Настройка датчиков холла для измерения потока воды
     if(flow_deflegmator && flow_deflegmator->init(flow_deflegmator)) {
-      attachInterrupt(digitalPinToInterrupt(flow_deflegmator->pin), pulse_counter_D, FALLING);
+      attachInterrupt(digitalPinToInterrupt(flow_deflegmator->get_pin()), pulse_counter_D, FALLING);
     }
 
     if(flow_condenser && flow_condenser->init(flow_condenser)) {
-      attachInterrupt(digitalPinToInterrupt(flow_condenser->pin), pulse_counter_C, FALLING);
+      attachInterrupt(digitalPinToInterrupt(flow_condenser->get_pin()), pulse_counter_C, FALLING);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -286,7 +286,7 @@ void check_flow(etl::shared_ptr<flow_sensor_t> f)
     int y = 1;
     for(auto s : f_sensors)
     {
-      if(s->name == f->name) break;
+      if(s->get_name() == f->get_name()) break;
       y++;
     }
     lcd.setCursor(9, y);
