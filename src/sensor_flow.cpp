@@ -13,7 +13,7 @@ bool flow_sensor_t::init(etl::weak_ptr<flow_sensor_t> instance)
     pinMode(pin, INPUT_PULLUP); // Настройка пина с подтяжкой к 3.3V
     // attachInterrupt ...
 
-    samples_flow.clear();    // Сброс очереди
+    reset();
 
     return true;
 }
@@ -23,6 +23,12 @@ void flow_sensor_t::reset()   // сбросить все счетчики
     total_count = 0;   // счетчик тиков
     pulse_count = 0;
 
+    // Размер очереди рассчитывается из максимального потока в минуту
+    // отнесенного на интервал измерения
+    size_t samble_queue_size = (sensor_info.sample_rate * sensor_info.working_flow_range.high) * (samples_flow_interval / 60000.0);
+    samples_flow.reserve(samble_queue_size);
+    samples_flow.clear();    // Сброс очереди
+    
     reset_calibrate();
 }
 

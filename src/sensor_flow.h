@@ -61,7 +61,7 @@ public:
 
     // Параметры датчика
     const sensor_info_t& get_sensor_info() const { return sensor_info; }
-    void set_sensor_info(const sensor_info_t& value) { sensor_info = value; }
+    void set_sensor_info(const sensor_info_t& value) { sensor_info = value; reset(); }
 
     // Измерение скорости минутного потока l/min
     uint32_t get_samples_flow_interval() const { return samples_flow_interval; }
@@ -97,7 +97,7 @@ protected:
 
     // Измерение скорости минутного потока l/min (измеряем количество срабатываний на меньшем диапазоне для более быстрого получения результата)
     const uint32_t samples_flow_interval = 10000; // Интервал измерения (ms) для расчета минутного потока
-    etl::queue<sample_t, 1000> samples_flow;   // Набор значений для измерения потока в минуту
+    etl::queue<sample_t> samples_flow;   // Набор значений для измерения потока в минуту
     volatile float minute_flow_rate = 0.0;        // Расчтанное мгновенное значение минутного расхода воды l/min
 
     // Калибровка датчика
