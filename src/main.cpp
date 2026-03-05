@@ -86,9 +86,8 @@ bool start_web_server() { // Moonshine web-ui
   if(use_web_ui)
   {
     wifi_server.reset();
-    webui::moonshine_server_config_t web_config;
-    // TODO: load settings
-
+    webui::moonshine_server_config_t web_config = etl::wifi::settings::load_config();
+    
     web_server = etl::make_unique<webui::moonshine_web_server>(web_config);
     if(web_server && web_server->begin()) {
       // Установка функции получения состояния
@@ -119,9 +118,8 @@ bool start_wifi_server() { // WiFi setup
   if(use_web_ui)
   {
     web_server.reset();
-    webui::moonshine_server_config_t web_config;
-    // TODO: load settings
-
+    webui::moonshine_server_config_t web_config = etl::wifi::settings::load_config();
+    
     wifi_server = etl::make_unique<etl::wifi::server_setup>(web_config);
     if(wifi_server && wifi_server->begin()) {
       // Вывод информации о подключении
@@ -204,10 +202,18 @@ void setup() {
     ////////////////////////////////////////////////////////////////////////////
     // WEB-UI
 
-    if(is_btn_hold_on_start) {
-      start_wifi_server();
-    } else {
-      start_web_server();
+    if(use_web_ui)
+    {
+      webui::moonshine_server_config_t web_config;
+      Serial.print("[WiFi Settings] init: ... ");
+      bool is_web_settings_init = etl::wifi::settings::init_config(web_config);
+      Serial.println(is_web_settings_init ? "OK" : "FAILED");
+
+      if(is_btn_hold_on_start) {
+        start_wifi_server();
+      } else {
+        start_web_server();
+      }
     }
   }
 

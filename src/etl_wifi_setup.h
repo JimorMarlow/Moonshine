@@ -42,11 +42,27 @@ namespace etl
             String wifi_password = "";                   // Пароль внешней сети
             uint16_t port = 80;                         // Порт веб-сервера
             uint32_t update_interval = 500;             // Интервал обновления данных (мс)
-            
+
             // Конфигурация веб-интерфейса
             String device_name = "ESP Device v1.0.0";   // Название устройства
             String device_description = "Smart home device based on ESP8266/ESP32";  // Описание
             String device_icon_svg = "";                // SVG иконка устройства (опционально)
+
+            void trace() const {
+                Serial.println("=== server_config_t settings ===");
+                Serial.printf("hostname = %s\n", hostname.c_str());
+                Serial.printf("ap_ssid = %s\n", ap_ssid.c_str());
+                Serial.printf("ap_password = %s\n", ap_password.c_str());
+                Serial.printf("wifi_ssid = %s\n", wifi_ssid.c_str());
+                Serial.printf("wifi_password = %s\n", wifi_password.c_str());
+                Serial.printf("port = %d\n", port);
+                Serial.printf("update_interval = %u\n", update_interval);
+                Serial.printf("--- device info ---\n");
+                Serial.printf("device_name = %s\n", device_name.c_str());
+                Serial.printf("device_description = %s\n", device_description.c_str());
+                Serial.printf("device_icon_svg = %s\n", device_icon_svg.c_str());
+                Serial.println("========================");
+            }
         };
 
         /**
@@ -70,6 +86,29 @@ namespace etl
             connected,                                  // Подключено
             error                                       // Ошибка
         };
+
+        /**
+         * @brief Значение текущих настроек WiFi
+         */
+        namespace settings
+        {
+            /**
+             * @brief Установить значения подключения к точками доступа по умолчанию и считать данные
+             * @param cfg Конфигурация WiFi сервера по умолчанию
+             */
+            bool init_config(const etl::wifi::server_config_t& default_cfg);  
+
+            /**
+             * @brief Установить значения подключения к точками доступа
+             * @param cfg Конфигурация WiFi сервера
+             */
+            bool save_config(const etl::wifi::server_config_t& cfg);  
+
+            /**
+             * @brief Считать текущие значения подключения к точками доступа
+             */
+            etl::wifi::server_config_t load_config();  
+        }
 
         /**
          * @brief Класс WiFi Setup Server

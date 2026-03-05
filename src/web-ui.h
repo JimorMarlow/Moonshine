@@ -50,6 +50,37 @@ namespace webui
             // Упрощённая иконка для встраивания в прошивку
             device_icon_svg = F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 33.6 39.7\"><rect width=\"33.6\" height=\"39.7\" fill=\"#a2d6fd\" rx=\"4\"/><circle cx=\"16.8\" cy=\"12\" r=\"5\" fill=\"#1d436d\"/><path d=\"M16.8 18v14M12 25h9.6\" stroke=\"#1d436d\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"16.8\" cy=\"32\" r=\"2.5\" fill=\"#1d436d\"/></svg>");
         }
+
+        moonshine_server_config_t(const etl::wifi::server_config_t& cfg)
+        {
+            hostname = cfg.hostname;
+            ap_ssid = cfg.ap_ssid;
+            ap_password = cfg.ap_password;
+            wifi_ssid = cfg.wifi_ssid;
+            wifi_password = cfg.wifi_password;
+            port = cfg.port;
+            update_interval = cfg.update_interval;
+            device_name = cfg.device_name;
+            device_description = cfg.device_description;
+            device_icon_svg = cfg.device_icon_svg;
+        }
+
+        moonshine_server_config_t& operator=(const etl::wifi::server_config_t& cfg)
+        {
+            if (this != &static_cast<const moonshine_server_config_t&>(cfg)) {
+                hostname = cfg.hostname;
+                ap_ssid = cfg.ap_ssid;
+                ap_password = cfg.ap_password;
+                wifi_ssid = cfg.wifi_ssid;
+                wifi_password = cfg.wifi_password;
+                port = cfg.port;
+                update_interval = cfg.update_interval;
+                device_name = cfg.device_name;
+                device_description = cfg.device_description;
+                device_icon_svg = cfg.device_icon_svg;
+            }
+            return *this;
+        }
     };
 
     /**

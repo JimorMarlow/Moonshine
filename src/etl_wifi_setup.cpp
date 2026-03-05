@@ -7,15 +7,71 @@
 
 #include "etl_wifi_setup.h"
 #include "etl_wifi_setup_html.h"
-#include <LittleFS.h>
+#include "etl/etl_littlefs.h"
+#include "etl/etl_settings.h"
 
 namespace etl
 {
     namespace wifi
     {
         // Константы для хранения настроек
-        static const char* WIFI_SETTINGS_FILE = "/wifi_settings.conf";
         static const uint32_t WIFI_CONNECT_TIMEOUT = 10000;  // 10 секунд
+
+        namespace settings
+        {
+            const String    data_path = "/settings/wifi.cfg";
+            const uint16_t  data_update_delay = 0;  // 0ms - Immiaditly update
+            server_config_t default_wifi_cfg;       // Значение по-умолчанию для сброса к заводским значениям
+
+            /**
+             * @brief Установить значения подключения к точками доступа по умолчанию и считать данные
+             * @param cfg Конфигурация WiFi сервера по умолчанию
+             */
+            bool init_config(const etl::wifi::server_config_t& default_cfg)
+            {
+                if(etl::little_fs::begin())
+                {
+                    // Создание директории для файла настроек
+                    etl::little_fs::create_dir(settings::data_path); 
+                }
+
+                // Сохранение настроек в постоянной памяти
+                etl::settings::data<etl::wifi::server_config_t> data (settings::data_path, settings::data_update_delay, default_cfg);
+                return data.init();
+            }  
+
+            /**
+             * @brief Установить значения подключения к точками доступа
+             * @param cfg Конфигурация WiFi сервера
+             */
+            bool save_config(const server_config_t& cfg)
+            {
+                etl::settings::data<etl::wifi::server_config_t> data (settings::data_path, settings::data_update_delay, default_wifi_cfg);
+                data.init();
+                data.set(cfg);
+                return data.save();
+            }  
+
+            /**
+             * @brief Считать текущие значения подключения к точками доступа
+             */
+            server_config_t load_config()
+            {
+                server_config_t cfg = default_wifi_cfg; 
+                etl::settings::data<etl::wifi::server_config_t> data (settings::data_path, settings::data_update_delay, default_wifi_cfg);
+                if(data.init())
+                {
+                    cfg = data.get();
+                    
+                    // device info update from actual default
+                    cfg.device_name = default_wifi_cfg.device_name;
+                    cfg.device_description = default_wifi_cfg.device_description;
+                    cfg.device_icon_svg = default_wifi_cfg.device_icon_svg;
+                }
+                
+                return cfg;
+            } 
+        }
 
         server_setup::server_setup(const server_config_t& cfg)
             : m_config(cfg)
@@ -246,119 +302,29 @@ namespace etl
         bool server_setup::save_settings()
         {
             Serial.println(F("[WiFiSetup] Saving settings..."));
-
-            if (!LittleFS.begin()) {
-                Serial.println(F("[WiFiSetup] Failed to mount LittleFS"));
-                return false;
-            }
-
-            File file = LittleFS.open(WIFI_SETTINGS_FILE, "w");
-            if (!file) {
-                Serial.println(F("[WiFiSetup] Failed to open settings file for writing"));
-                LittleFS.end();
-                return false;
-            }
-
-            // Запись настроек в файл
-            file.println(m_config.hostname);
-            file.println(m_config.ap_ssid);
-            file.println(m_config.ap_password);
-            file.println(m_config.wifi_ssid);
-            file.println(m_config.wifi_password);
-            file.println(m_config.port);
-            file.println(m_config.update_interval);
-
-            file.close();
-            LittleFS.end();
-
-            Serial.println(F("[WiFiSetup] Settings saved"));
-            return true;
+            m_config.trace();
+            bool result = settings::save_config(m_config);
+            Serial.println(result ? "OK" : "FAILED");
+            return result;
         }
 
         bool server_setup::load_settings()
         {
-            if (!LittleFS.begin()) {
-                Serial.println(F("[WiFiSetup] Failed to mount LittleFS"));
-                return false;
-            }
-
-            File file = LittleFS.open(WIFI_SETTINGS_FILE, "r");
-            if (!file) {
-                Serial.println(F("[WiFiSetup] Settings file not found"));
-                LittleFS.end();
-                return false;
-            }
-
-            // Чтение настроек из файла
-            String hostname = file.readStringUntil('\n');
-            String ap_ssid = file.readStringUntil('\n');
-            String ap_password = file.readStringUntil('\n');
-            String wifi_ssid = file.readStringUntil('\n');
-            String wifi_password = file.readStringUntil('\n');
-            String port_str = file.readStringUntil('\n');
-            String interval_str = file.readStringUntil('\n');
-
-            file.close();
-            LittleFS.end();
-
-            // Удаление символов перевода строки
-            hostname.trim();
-            ap_ssid.trim();
-            ap_password.trim();
-            wifi_ssid.trim();
-            wifi_password.trim();
-            port_str.trim();
-            interval_str.trim();
-
-            // Проверка на пустые значения
-            if (hostname.length() == 0) {
-                Serial.println(F("[WiFiSetup] Invalid settings file"));
-                return false;
-            }
-
             // Применение настроек
-            m_config.hostname = hostname;
-            m_config.ap_ssid = ap_ssid;
-            m_config.ap_password = ap_password;
-            m_config.wifi_ssid = wifi_ssid;
-            m_config.wifi_password = wifi_password;
-
-            if (port_str.length() > 0) {
-                m_config.port = port_str.toInt();
-            }
-
-            if (interval_str.length() > 0) {
-                m_config.update_interval = interval_str.toInt();
-            }
-
+            m_config = settings::load_config();
             Serial.println(F("[WiFiSetup] Settings loaded"));
+            m_config.trace();
             return true;
         }
 
         bool server_setup::reset_settings()
         {
             Serial.println(F("[WiFiSetup] Resetting settings..."));
-
-            if (!LittleFS.begin()) {
-                Serial.println(F("[WiFiSetup] Failed to mount LittleFS"));
-                return false;
-            }
-
-            if (LittleFS.exists(WIFI_SETTINGS_FILE)) {
-                if (!LittleFS.remove(WIFI_SETTINGS_FILE)) {
-                    Serial.println(F("[WiFiSetup] Failed to remove settings file"));
-                    LittleFS.end();
-                    return false;
-                }
-            }
-
-            LittleFS.end();
-
             // Сброс конфигурации к значениям по умолчанию
-            m_config = server_config_t();
+            m_config = settings::default_wifi_cfg;
 
             Serial.println(F("[WiFiSetup] Settings reset"));
-            return true;
+            return settings::save_config(m_config);
         }
 
         void server_setup::set_config(const server_config_t& cfg)
