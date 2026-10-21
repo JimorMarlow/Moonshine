@@ -70,7 +70,7 @@ module inner_channel() {
         cylinder(d=HOSE_SIDE_D, h=LENGTH * 0.4 + OVERCUT, center=false);
     
     // Плавный переход (конус) между диаметрами
-    translate([0, 0, LENGTH * 0.5])
+    translate([0, 0, LENGTH * 0.4])
         cylinder(d1=SENSOR_SIDE_D, d2=HOSE_SIDE_D, h=LENGTH * 0.2, center=false);
 }
 
