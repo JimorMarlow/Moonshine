@@ -2,8 +2,8 @@
 /**
  * @file web-ui.h
  * @brief Веб-интерфейс мониторинга процесса дистилляции Moonshine
- * 
- * Платформа: ESP8266 (NodeMCU v3)
+ *
+ * Платформа: ESP8266 / ESP32
  * 
  * Особенности:
  * - Комбинированный режим работы: точка доступа + подключение к Wi-Fi сети
@@ -17,12 +17,21 @@
  *       4. Обновить версию в заголовке на MS_VERSION_STRING
  */
 
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
+#include <etl/etl_defines.h>
+
+#ifdef ETL_ESP8266
+    #include <ESP8266WiFi.h>
+    #include <ESP8266WebServer.h>
+    #include <ESP8266mDNS.h>
+#elif defined(ETL_ESP32)
+    #include <WiFi.h>
+    #include <WebServer.h>
+    #include <ESPmDNS.h>
+#endif
+
 #include "settings.h"
 #include "version.h"
-#include "etl_wifi_setup.h"
+#include "etl_wifi_setup.h"   // даёт ETL_WEB_SERVER_TYPE
 
 namespace webui
 {
@@ -199,7 +208,7 @@ namespace webui
         virtual String state_to_json(const settings::moonshine::state_t& state);
 
         etl::wifi::server_config_t m_config;        ///< Конфигурация (базовый тип)
-        ESP8266WebServer m_server;                  ///< Веб-сервер
+        ETL_WEB_SERVER_TYPE m_server;                  ///< Веб-сервер
         settings::moonshine::state_t (*m_state_getter)() = nullptr;  ///< Функция получения состояния
         bool m_initialized = false;                 ///< Флаг инициализации
     };

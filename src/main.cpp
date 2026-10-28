@@ -157,8 +157,8 @@ void setup() {
     if(SERIAL_INIT_DELAY > 0) delay(SERIAL_INIT_DELAY);  // для ESP32 C3 supermini нуждо сделать задержку, чтобы выводилась отладочная информация
     
     // Display
-    lcd.init();
-    lcd.backlight();
+    lcd.begin();
+    lcd.setBacklight(true);
     lcd.setCursor(0, 0);
     lcd.printf("Moonshine v%s", String(MS_VERSION_STRING).c_str());
     delay(1000);
@@ -324,7 +324,8 @@ void loop()
     {
       // Напечатать количество нажатий на кнопки
       Serial.println("Button click");
-      int count = ++btn_clicks;
+      btn_clicks += 1;
+      int count = btn_clicks;
       lcd.setCursor(15,0);
       lcd.print(count);
 

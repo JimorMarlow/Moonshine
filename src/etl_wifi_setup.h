@@ -1,28 +1,28 @@
 #pragma once
+
 /**
  * @file etl_wifi_setup.h
  * @brief WiFi Setup Server для первичной настройки WiFi подключения
  *
- * Платформа: ESP8266 (NodeMCU v3)
- *
- * Особенности:
- * - Режим точки доступа для настройки WiFi
- * - Сканирование доступных сетей
- * - Подключение к выбранной сети
- * - Сохранение настроек в энергонезависимой памяти
- * - Сброс к заводским настройкам
- * - Встроенный HTTP сервер с веб-интерфейсом
- * - mDNS для доступа по имени hostname.local
- *
- * @note Класс предоставляет серверную часть для настройки WiFi с веб-интерфейсом.
- *       Веб-страница доступна по http://hostname.local (где hostname из конфигурации)
+ * Платформа: ESP8266 / ESP32
  */
 
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <ArduinoJson.h>
+#include <etl/etl_defines.h>
 #include <etl/etl_memory.h>
+
+#ifdef ETL_ESP8266
+    #include <ESP8266WiFi.h>
+    #include <ESP8266WebServer.h>
+    #include <ESP8266mDNS.h>
+    #define ETL_WEB_SERVER_TYPE ESP8266WebServer
+#elif defined(ETL_ESP32)
+    #include <WiFi.h>
+    #include <WebServer.h>
+    #include <ESPmDNS.h>
+    #define ETL_WEB_SERVER_TYPE WebServer
+#else
+    #error "ETL WiFi setup: unsupported platform (need ETL_ESP8266 or ETL_ESP32)"
+#endif
 
 namespace etl
 {
@@ -254,7 +254,7 @@ namespace etl
             virtual void handle_client();
 
         protected:
-            etl::shared_ptr<ESP8266WebServer> m_server; ///< HTTP сервер
+            etl::shared_ptr<ETL_WEB_SERVER_TYPE> m_server;///< HTTP сервер
             std::vector<scan_result_t> m_scan_cache;    ///< Кэш результатов сканирования
             uint32_t m_scan_timestamp = 0;              ///< Время последнего сканирования
             static const uint32_t SCAN_CACHE_TIME = 30000;  ///< Время кэширования сканирования (30 сек)

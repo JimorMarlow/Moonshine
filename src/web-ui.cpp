@@ -235,24 +235,20 @@ namespace webui
 
     void moonshine_web_server::stop()
     {
-        if (!m_initialized) {
-            return;
-        }
+        if (!m_initialized) return;
 
         Serial.println(F("[WebUI] Stopping..."));
 
-        // Остановка HTTP сервера
         m_server.stop();
-
-        // Остановка mDNS
         MDNS.end();
 
-        // Отключение WiFi
         WiFi.disconnect(true);
+    #ifdef ETL_ESP8266
+        WiFi.softAPdisconnect(true);
+    #endif
         WiFi.mode(WIFI_OFF);
 
         m_initialized = false;
-
         Serial.println(F("[WebUI] Stopped"));
     }
 
@@ -265,13 +261,16 @@ namespace webui
     {
         Serial.println(F("[WebUI] Initializing..."));
 
-        // Настройка WiFi
         if (m_config.wifi_ssid.length() > 0) {
-            // Режим STA+AP или только STA
             Serial.print(F("[WebUI] Connecting to WiFi: "));
             Serial.println(m_config.wifi_ssid);
 
+        #ifdef ETL_ESP8266
             WiFi.hostname(m_config.hostname);
+        #elif defined(ETL_ESP32)
+            WiFi.setHostname(m_config.hostname.c_str());
+        #endif
+
             WiFi.mode(WIFI_STA);
             WiFi.begin(m_config.wifi_ssid.c_str(), m_config.wifi_password.c_str());
 
@@ -294,7 +293,6 @@ namespace webui
                 Serial.println(WiFi.softAPIP());
             }
         } else {
-            // Только AP режим
             Serial.println(F("[WebUI] Starting in AP mode"));
             WiFi.mode(WIFI_AP);
             WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
@@ -302,7 +300,6 @@ namespace webui
             Serial.println(WiFi.softAPIP());
         }
 
-        // mDNS
         if (MDNS.begin(m_config.hostname.c_str())) {
             Serial.print(F("[WebUI] mDNS: http://"));
             Serial.print(m_config.hostname);
@@ -310,7 +307,6 @@ namespace webui
             MDNS.addService("http", "tcp", m_config.port);
         }
 
-        // Регистрация обработчиков
         m_server.on("/", HTTP_GET, std::bind(&moonshine_web_server::handle_root, this));
         m_server.on("/api/state", HTTP_GET, std::bind(&moonshine_web_server::handle_api_state, this));
         m_server.on("/api/status", HTTP_GET, std::bind(&moonshine_web_server::handle_api_status, this));
@@ -327,11 +323,15 @@ namespace webui
 
     void moonshine_web_server::handle_client()
     {
-        if (m_initialized) {
-            MDNS.update();
-            m_server.handleClient();
-        }
+        if (!m_initialized) return;
+
+    #ifdef ETL_ESP8266
+        MDNS.update();   // на ESP32 mDNS работает в отдельной задаче, update() не нужен
+    #endif
+
+        m_server.handleClient();
     }
+
 
     bool moonshine_web_server::is_connected() const
     {

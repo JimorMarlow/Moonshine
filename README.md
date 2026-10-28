@@ -291,6 +291,9 @@ void loop() {
     webServer.handleClient();
 }
 ```
+#### 1.3.1 Переход на ESP32-WROOM - fixes
+
+web-ui - updated to ESP32/ESP8266 compatibility
 
 #### 1.3.0 Переход на ESP32-WROOM
 

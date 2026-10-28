@@ -1,14 +1,15 @@
 /**
  * @file etl_wifi_setup.cpp
- * @brief Реализация WiFi Setup Server для ESP8266
+ * @brief Реализация WiFi Setup Server для ESP8266/ESP32
  *
- * Платформа: ESP8266 (NodeMCU v3)
+ * Платформа: ESP8266/ESP32
  */
 
 #include "etl_wifi_setup.h"
 #include "etl_wifi_setup_html.h"
 #include "etl/etl_littlefs.h"
 #include "etl/etl_settings.h"
+#include <ArduinoJson.h>   
 
 namespace etl
 {
@@ -125,7 +126,7 @@ namespace etl
             Serial.println(F("[WiFiSetup] Starting HTTP server..."));
 
             // Создание сервера через shared_ptr
-            m_server = etl::make_shared<ESP8266WebServer>(m_config.port);
+            m_server = etl::make_shared<ETL_WEB_SERVER_TYPE>(m_config.port);
 
             // Настройка роутинга
             setup_http_routes();
@@ -190,8 +191,11 @@ namespace etl
 
         void server_setup::handle_client()
         {
-            if (m_server != nullptr) {
-                MDNS.update();
+            if (m_server != nullptr) 
+            {
+            #ifdef ETL_ESP8266
+                MDNS.update();   // только ESP8266
+            #endif
                 m_server->handleClient();
             }
         }
@@ -336,7 +340,11 @@ namespace etl
         {
             Serial.println(F("[WiFiSetup] Rebooting..."));
             delay(100);
+        #ifdef ETL_ESP8266
             ESP.reset();
+        #elif defined(ETL_ESP32)
+            ESP.restart();
+        #endif
         }
 
         bool server_setup::start_ap()
@@ -370,13 +378,16 @@ namespace etl
             Serial.print(F("[WiFiSetup] Connecting to "));
             Serial.println(m_config.wifi_ssid);
 
-            // Установка режима STA
             WiFi.mode(WIFI_STA);
 
-            // Подключение к сети
+        #ifdef ETL_ESP8266
+            WiFi.hostname(m_config.hostname);
+        #elif defined(ETL_ESP32)
+            WiFi.setHostname(m_config.hostname.c_str());
+        #endif
+
             WiFi.begin(m_config.wifi_ssid.c_str(), m_config.wifi_password.c_str());
 
-            // Ожидание подключения
             uint32_t start_time = millis();
             while (WiFi.status() != WL_CONNECTED && (millis() - start_time) < timeout) {
                 delay(500);
@@ -395,7 +406,6 @@ namespace etl
             Serial.println(F("\n[WiFiSetup] Connection timeout"));
             m_connection_status = connection_status_t::error;
 
-            // Возврат в режим AP при ошибке подключения
             WiFi.mode(WIFI_AP);
             WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
 
@@ -428,20 +438,29 @@ namespace etl
 
         String server_setup::get_encryption_type(uint8_t type) const
         {
+        #ifdef ETL_ESP8266
             switch (type) {
-                case ENC_TYPE_NONE:
-                    return "Open";
-                case ENC_TYPE_WEP:
-                    return "WEP";
-                case ENC_TYPE_TKIP:
-                    return "WPA";
-                case ENC_TYPE_CCMP:
-                    return "WPA2";
-                case ENC_TYPE_AUTO:
-                    return "WPA/WPA2";
-                default:
-                    return "Unknown";
+                case ENC_TYPE_NONE: return "Open";
+                case ENC_TYPE_WEP:  return "WEP";
+                case ENC_TYPE_TKIP: return "WPA";
+                case ENC_TYPE_CCMP: return "WPA2";
+                case ENC_TYPE_AUTO: return "WPA/WPA2";
+                default:            return "Unknown";
             }
+        #elif defined(ETL_ESP32)
+            // ESP32: WiFi.encryptionType() возвращает wifi_auth_mode_t
+            switch (type) {
+                case WIFI_AUTH_OPEN:             return "Open";
+                case WIFI_AUTH_WEP:              return "WEP";
+                case WIFI_AUTH_WPA_PSK:          return "WPA";
+                case WIFI_AUTH_WPA2_PSK:         return "WPA2";
+                case WIFI_AUTH_WPA_WPA2_PSK:     return "WPA/WPA2";
+                case WIFI_AUTH_WPA2_ENTERPRISE:  return "WPA2-Enterprise";
+                case WIFI_AUTH_WPA3_PSK:         return "WPA3";
+                case WIFI_AUTH_WPA2_WPA3_PSK:    return "WPA2/WPA3";
+                default:                         return "Unknown";
+            }
+        #endif
         }
 
         String server_setup::get_device_icon() const
