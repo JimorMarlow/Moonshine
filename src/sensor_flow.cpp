@@ -57,7 +57,8 @@ void flow_sensor_t::pulse()
 char flow_sensor_t::get_spinner_char(int counter)
 {
     // Массив символов для анимации
-    static const char _spinner[] = {' ', '-', '/', '|', '+', 'X'};
+    // static const char _spinner[] = {' ', '-', '/', '|', '+', 'X'};
+    static const char _spinner[] = {'\xa1', '\xa5', '\xdb'}; // . o [] - типа вращающегося колечка
     static const etl::array _spinner_chars {_spinner};
     // Используем остаток от деления для циклического выбора символа
     // upd. уменьшил на порядок для большей плавности анимации
