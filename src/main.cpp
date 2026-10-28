@@ -66,8 +66,8 @@ void IRAM_ATTR pulse_counter_C() {
 ///////////////////////////////////
 
 // Дисплей LED 2004 
-#include <LiquidCrystal_I2C.h>
-LiquidCrystal_I2C lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
+#include <GyverLCD.h>
+GyverLCD lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 
 #include "EncButton.h"
 etl::shared_ptr<Button> btn = etl::make_shared<Button>(TOUCH_BTN_PIN);
