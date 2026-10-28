@@ -303,7 +303,7 @@ web-ui - updated to ESP32/ESP8266 compatibility
     - docs\wokwi\wokwi-Moonshine_02.zip
     - docs\wokwi\wire-esp32-v2.png
 
-#### 1.3.1 Поменял схему подключения ESP32-WROOM и файл readme.md
+#### 1.3.- Поменял схему подключения ESP32-WROOM и файл readme.md
 
 На память - информация о подключении графического дисплея
 docs\ST7789 320x240 EC11 Rotary Encoder Button.md
