@@ -66,8 +66,14 @@ void IRAM_ATTR pulse_counter_C() {
 ///////////////////////////////////
 
 // Дисплей LED 2004 
-#include <GyverLCD.h>
-GyverLCD lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
+//#include <GyverLCD.h>
+//GyverLCD lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
+#include <GyverLCD_UTF8.h>
+GyverLCD_UTF8 lcd(0x27, 16, 2);
+// Для печати символа градуса можно сделать так:
+// lcd.print("Температура: 23°C");  // Рекомендованный
+// lcd.write(223);                  // символ градуса в стандартной таблице HD44780 имеет код 223 (0xDF), и его можно вывести через write()
+
 
 #include "EncButton.h"
 etl::shared_ptr<Button> btn = etl::make_shared<Button>(TOUCH_BTN_PIN);
@@ -79,7 +85,7 @@ volatile int btn_clicks = 0;  // для проверки нажатий кноп
 // Глобальный экземпляр веб-сервера
 etl::unique_ptr<webui::MoonshineWebServer> web_server;
 etl::unique_ptr<etl::wifi::server_setup> wifi_server;
-bool use_web_ui = true;
+bool use_web_ui = false;
 
 bool start_web_server() { // Moonshine web-ui
   // WEB-UI
@@ -345,4 +351,5 @@ void loop()
   {
     web_server->handle_client();
   }
+
 }
