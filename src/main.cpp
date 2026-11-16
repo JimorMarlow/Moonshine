@@ -69,7 +69,7 @@ void IRAM_ATTR pulse_counter_C() {
 //#include <GyverLCD.h>
 //GyverLCD lcd(0x27, 20, 4);  // Address, columns, rows [web:8]
 #include <GyverLCD_UTF8.h>
-GyverLCD_UTF8 lcd(0x27, 16, 2);
+GyverLCD_UTF8 lcd(0x27, 20, 4);
 // Для печати символа градуса можно сделать так:
 // lcd.print("Температура: 23°C");  // Рекомендованный
 // lcd.write(223);                  // символ градуса в стандартной таблице HD44780 имеет код 223 (0xDF), и его можно вывести через write()
@@ -131,11 +131,11 @@ bool start_wifi_server() { // WiFi setup
       // Вывод информации о подключении
       Serial.println(F("\n=== WiFi Server Info ==="));
       Serial.print(F("Mode: "));
-      Serial.println(web_server->get_mode());
+      Serial.println(wifi_server->get_mode());
       Serial.print(F("IP Address: "));
-      Serial.println(web_server->get_ip_address());
+      Serial.println(wifi_server->get_ip_address());
       Serial.print(F("Hostname: http://"));
-      Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
+      Serial.print(wifi_server->get_mode() == "AP" ? wifi_server->get_ip_address() : "moonshine.local");
       Serial.println(F("/"));
       Serial.println(F("=========================\n")); 
       return true;

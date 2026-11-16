@@ -12,9 +12,7 @@ bool flow_sensor_t::init(etl::weak_ptr<flow_sensor_t> instance)
     reset();
     pinMode(pin, INPUT_PULLUP); // Настройка пина с подтяжкой к 3.3V
     // attachInterrupt ...
-
-    reset();
-
+    
     return true;
 }
 
@@ -34,7 +32,12 @@ void flow_sensor_t::reset()   // сбросить все счетчики
 
 bool flow_sensor_t::tick()
 {
-    const int add_pulses = pulse_count; pulse_count = 0;    // time critical place
+     // импульс, пришедший между чтением и обнулением, не должен теряться
+    noInterrupts();
+    const int add_pulses = pulse_count;
+    pulse_count = 0;
+    interrupts();
+ //   const int add_pulses = pulse_count; pulse_count = 0;    // time critical place
     if(add_pulses > 0)
     {
         total_count += add_pulses;

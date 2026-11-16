@@ -316,3 +316,13 @@ web-ui - updated to ESP32/ESP8266 compatibility
 
 На память - информация о подключении графического дисплея
 docs\ST7789 320x240 EC11 Rotary Encoder Button.md
+
+#### 1.3.3 GyverLCD_UTF8 20x4, etl::vector в wifi-setup, ESP32 на Arduino core 3.x
+
+- Экран переведён на `GyverLCD_UTF8`, раскладка 20x4 (на 16x2 вывод четырёх датчиков не помещается — строки клампятся в две).
+- Веб-интерфейс пока отключён (`use_web_ui = false`) — идёт отладка перехода на GyverLCD.
+- `etl::wifi::server_setup`: `std::vector` заменён на `etl::vector` из `etl/etl_vector.h`, сортировка сетей по RSSI — вставками, без STL.
+- `start_wifi_server()`: режим и IP печатаются из `wifi_server`, а не из обнулённого `web_server`.
+- `flow_sensor_t::tick()`: чтение и обнуление `pulse_count` перенесено в критическую секцию (`noInterrupts`), убран двойной `reset()` в `init()`.
+- ESP32: платформа `espressif32` 8.x (Arduino core 3.x) — ETL 1.1.2 использует `ledcAttach`/`ledcDetach` из ядра 3.x.
+- Сборка: ESP8266 — RAM 39.6%, Flash 43.5%; ESP32 — RAM 15.7%, Flash 85.4% (штатная схема разделов).

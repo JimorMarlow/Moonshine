@@ -9,6 +9,7 @@
 
 #include <etl/etl_defines.h>
 #include <etl/etl_memory.h>
+#include <etl/etl_vector.h>
 
 #ifdef ETL_ESP8266
     #include <ESP8266WiFi.h>
@@ -194,7 +195,7 @@ namespace etl
              * @param results Вектор для результатов сканирования
              * @return Количество найденных сетей
              */
-            virtual int32_t scan_networks(std::vector<scan_result_t>& results);
+            virtual int32_t scan_networks(etl::vector<scan_result_t>& results);
 
             /**
              * @brief Подключение к WiFi сети
@@ -255,7 +256,7 @@ namespace etl
 
         protected:
             etl::shared_ptr<ETL_WEB_SERVER_TYPE> m_server;///< HTTP сервер
-            std::vector<scan_result_t> m_scan_cache;    ///< Кэш результатов сканирования
+            etl::vector<scan_result_t> m_scan_cache;    ///< Кэш результатов сканирования
             uint32_t m_scan_timestamp = 0;              ///< Время последнего сканирования
             static const uint32_t SCAN_CACHE_TIME = 30000;  ///< Время кэширования сканирования (30 сек)
 
@@ -427,7 +428,7 @@ namespace etl
  *
  * // Пример сканирования сетей
  * void scan_wifi_networks() {
- *     std::vector<etl::wifi::scan_result_t> networks;
+ *     etl::vector<etl::wifi::scan_result_t> networks;
  *     int32_t count = wifi_server.scan_networks(networks);
  *
  *     Serial.printf("Found %d networks\n", count);

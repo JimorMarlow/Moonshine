@@ -1,0 +1,46 @@
+{
+  // Задачи PlatformIO для сборки без встроенного терминала расширения.
+  // pio.exe не в PATH, поэтому путь задан явно.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PIO: Build",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-e", "nodemcuv3"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "PIO: Upload",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-e", "nodemcuv3", "-t", "upload"],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "PIO: Monitor",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["device", "monitor", "-b", "115200"],
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "PIO: Clean",
+      "type": "shell",
+      "command": "${env:USERPROFILE}\\.platformio\\penv\\Scripts\\pio.exe",
+      "args": ["run", "-t", "clean"],
+      "problemMatcher": []
+    },
+    {
+      "label": "PIO: Build + Upload + Monitor",
+      "dependsOrder": "sequence",
+      "dependsOn": ["PIO: Build", "PIO: Upload", "PIO: Monitor"],
+      "problemMatcher": []
+    }
+  ]
+}

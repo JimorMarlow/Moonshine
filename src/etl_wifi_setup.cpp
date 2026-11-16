@@ -234,7 +234,7 @@ namespace etl
             }
         }
 
-        int32_t server_setup::scan_networks(std::vector<scan_result_t>& results)
+        int32_t server_setup::scan_networks(etl::vector<scan_result_t>& results)
         {
             Serial.println(F("[WiFiSetup] Scanning networks..."));
 
@@ -273,11 +273,16 @@ namespace etl
                               i + 1, result.ssid.c_str(), result.rssi, result.encryption.c_str());
             }
 
-            // Сортировка по уровню сигнала (убывание)
-            std::sort(results.begin(), results.end(),
-                      [](const scan_result_t& a, const scan_result_t& b) {
-                          return a.rssi > b.rssi;
-                      });
+            // Сортировка по уровню сигнала (убывание), без STL: найденных сетей немного
+            for (size_t i = 1; i < results.size(); ++i) {
+                scan_result_t key = results[i];
+                size_t j = i;
+                while (j > 0 && results[j - 1].rssi < key.rssi) {
+                    results[j] = results[j - 1];
+                    --j;
+                }
+                results[j] = key;
+            }
 
             WiFi.scanDelete();
             return count;
