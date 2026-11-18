@@ -326,3 +326,20 @@ docs\ST7789 320x240 EC11 Rotary Encoder Button.md
 - `flow_sensor_t::tick()`: чтение и обнуление `pulse_count` перенесено в критическую секцию (`noInterrupts`), убран двойной `reset()` в `init()`.
 - ESP32: платформа `espressif32` 8.x (Arduino core 3.x) — ETL 1.1.2 использует `ledcAttach`/`ledcDetach` из ядра 3.x.
 - Сборка: ESP8266 — RAM 39.6%, Flash 43.5%; ESP32 — RAM 15.7%, Flash 85.4% (штатная схема разделов).
+
+#### 1.3.4 Своя таблица разделов ESP32 (3 МБ под прошивку), исправлены форматы printf
+
+- Добавлена таблица разделов `partitions/esp32wroom32u_spiffs.csv` для ESP32-WROOM-32U (4 МБ flash), подключена через `board_build.partitions`.
+- OTA не планируется, поэтому второй слот приложения и `otadata` убраны: одно приложение `factory` на 3 МБ + LittleFS 960 КБ. Всего ровно 4 МБ.
+- Прежний вариант таблицы был расписан на 8 МБ (LittleFS 0x450000 уходила за 0x400000) и давал предупреждение генератора про имя раздела `littlefs` при подтипе `spiffs`.
+- Раздел файловой системы назван `spiffs` — так его находит дефолтный `LittleFS.begin()`.
+- ESP32: Flash 35.6% (1119352 из 3145728), RAM 15.7%. ESP8266 без изменений: Flash 43.5%, RAM 39.6%.
+- Исправлены форматы `printf` для ESP32, где `uint32_t`/`int32_t` — это `long`: `settings.h`, `etl_wifi_setup.h`, `etl_wifi_setup.cpp` (`%lu`/`%ld` с явным приведением).
+- `flow_sensor_t::pulse()`: `pulse_count++` заменён на `pulse_count = pulse_count + 1` — инкремент `volatile` запрещён в C++20.
+
+> **Важно: перед заливкой прошивки с новой таблицей разделов очистите flash.**
+> Раскладка поменялась, старые разделы останутся в чипе и дадут мусор. Данные LittleFS при этом теряются.
+> ```powershell
+> pio run -e esp32-wroom-38u -t erase      # очистка флеша (данные LittleFS пропадут)
+> pio run -e esp32-wroom-38u -t upload
+> ```
