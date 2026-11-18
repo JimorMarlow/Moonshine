@@ -53,7 +53,8 @@ bool flow_sensor_t::tick()
 
 void flow_sensor_t::pulse()
 {
-    pulse_count++;
+    // ++ для volatile запрещён в C++20, а инкремент здесь нужен атомарный по сути (вызов из прерывания)
+    pulse_count = pulse_count + 1;
     //   Serial.printf("pulse %s - %s: %d\n", name.c_str(), title.c_str(), total_count);
 }
 

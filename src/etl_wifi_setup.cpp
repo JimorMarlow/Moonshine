@@ -258,7 +258,7 @@ namespace etl
                 return 0;
             }
 
-            Serial.printf("[WiFiSetup] Found %d networks\n", count);
+            Serial.printf("[WiFiSetup] Found %ld networks\n", (long)count);
 
             for (int32_t i = 0; i < count; ++i) {
                 scan_result_t result;
@@ -269,8 +269,8 @@ namespace etl
 
                 results.push_back(result);
 
-                Serial.printf("[WiFiSetup] Network %d: %s (RSSI: %d, Encryption: %s)\n",
-                              i + 1, result.ssid.c_str(), result.rssi, result.encryption.c_str());
+                Serial.printf("[WiFiSetup] Network %ld: %s (RSSI: %ld, Encryption: %s)\n",
+                              (long)(i + 1), result.ssid.c_str(), (long)result.rssi, result.encryption.c_str());
             }
 
             // Сортировка по уровню сигнала (убывание), без STL: найденных сетей немного
