@@ -216,7 +216,7 @@ https://arduinoexpert.com/controlling-steam-valve-with-arduino-and-stepper-motor
 #### 0.0.1
 Добавил основу проекта, настроил библиотеки
 #### 0.0.2
-sensor_t - обвязка вокруг GyverDS18 для опроса датчиков температуры#### 0.#### 0.0.3
+sensor_t - обвязка вокруг GyverDS18 для опроса датчиков температуры
 #### 0.0.3
 Исправил опрос температуры, датчики можно переключать на ходу
 #### 0.0.4
@@ -257,12 +257,6 @@ https://ali.click/ktwszq
 #### 1.1.1 settings::moonshine::state_t
 Начал оборачивать все данные в нормальные структуры...
 
-#### 1.2.3 Исправление mDNS
-Исправлена работа mDNS для доступа по http://moonshine.local:
-- Добавлен вызов `MDNS.update()` в цикле обработки клиентов
-- Исправлен порядок инициализации WiFi (hostname до mode)
-- Без этого mDNS служба не отвечала на запросы после запуска
-
 #### 1.2.0 Web UI для ESP8266
 Добавлен веб-интерфейс для мониторинга процесса дистилляции:
 - **Платформа:** ESP8266 (NodeMCU v3)
@@ -300,9 +294,12 @@ void loop() {
     webServer.handleClient();
 }
 ```
-#### 1.3.1 Переход на ESP32-WROOM - fixes
 
-web-ui - updated to ESP32/ESP8266 compatibility
+#### 1.2.3 Исправление mDNS
+Исправлена работа mDNS для доступа по http://moonshine.local:
+- Добавлен вызов `MDNS.update()` в цикле обработки клиентов
+- Исправлен порядок инициализации WiFi (hostname до mode)
+- Без этого mDNS служба не отвечала на запросы после запуска
 
 #### 1.3.0 Переход на ESP32-WROOM
 
@@ -311,6 +308,10 @@ web-ui - updated to ESP32/ESP8266 compatibility
 - Схема подключения: 
     - docs\wokwi\wokwi-Moonshine_02.zip
     - docs\wokwi\wire-esp32-v2.png
+
+#### 1.3.1 Переход на ESP32-WROOM - fixes
+
+web-ui - updated to ESP32/ESP8266 compatibility
 
 #### 1.3.- Поменял схему подключения ESP32-WROOM и файл readme.md
 
