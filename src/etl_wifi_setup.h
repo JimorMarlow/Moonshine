@@ -57,7 +57,7 @@ namespace etl
                 Serial.printf("wifi_ssid = %s\n", wifi_ssid.c_str());
                 Serial.printf("wifi_password = %s\n", wifi_password.c_str());
                 Serial.printf("port = %d\n", port);
-                Serial.printf("update_interval = %u\n", update_interval);
+                Serial.printf("update_interval = %lu\n", (unsigned long)update_interval);
                 Serial.printf("--- device info ---\n");
                 Serial.printf("device_name = %s\n", device_name.c_str());
                 Serial.printf("device_description = %s\n", device_description.c_str());

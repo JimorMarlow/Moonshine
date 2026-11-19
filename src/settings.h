@@ -21,7 +21,7 @@ namespace moonshine
 
         void trace() {
             Serial.println("=== settings::moonshine::state_t ===");
-            Serial.printf("uptime_ms = %d\n", uptime_ms);
+            Serial.printf("uptime_ms = %lu\n", (unsigned long)uptime_ms);
             Serial.printf("steam_temperature = %s\n", steam_temperature ? String(*steam_temperature).c_str() : "---");
             Serial.printf("heater_temperature = %s\n", heater_temperature ? String(*heater_temperature).c_str() : "---");
             Serial.printf("deflegmater_temperature = %s\n", deflegmater_temperature ? String(*deflegmater_temperature).c_str() : "---");
