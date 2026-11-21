@@ -110,10 +110,10 @@ bool start_web_ui(bool start_settings) { // Moonshine web-ui
   }
 
   // При зажатой кнопке при старте - сервер настроек, иначе - web-ui
-  if(start_settings) {
-    web_manager->start_settings();
-  } else {
-    web_manager->start_content();
+  if(!web_manager->start(start_settings))
+  {
+    Serial.println(F("[ERROR] Web manager start failed"));
+    return false;
   }
 
   return web_manager->trace_connection();

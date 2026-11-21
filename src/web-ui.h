@@ -10,13 +10,14 @@
  *   etl::webui::web_server_base_t из библиотеки ETL
  * - Настройка сети, темы и шрифта выполняется редко, поэтому для неё запускается
  *   отдельный сервер etl::webui::server_setup: в обычном режиме память под него не занята
- * - Переключение серверов выполняет etl::webui::web_manager, в обычном режиме
- *   всегда работает web-ui
+ * - При переключении режима Wi-Fi не переинициализируется: точка доступа остаётся
+ *   поднятой, меняется только HTTP-сервер
+ * - Оба сервера создаются один раз, их HTTP-серверы поднимаются и гасятся по требованию
  * - Локальное имя хоста: "moonshine"
  * - Реальное время: данные получаются из settings::moonshine::state_t
  *
  * @note Для обновления макета веб-интерфейса:
- *       1. Взять актуальный файл из docs/web-ui/qwen-distillation.xxx.html
+ *       1. Взять актуальный файл из docs/hystory/qwen-distillation.xxx.html
  *       2. Извлечь HTML/CSS/JS код
  *       3. Заменить данные симуляции на функцию get_state()
  *       4. Обновить версию в заголовке на MS_VERSION_STRING
@@ -67,23 +68,26 @@ namespace webui
         using state_getter_t = settings::moonshine::state_t (*)();
 
         moonshine_web_server();
-
-        /**
-         * @brief Виртуальный деструктор
-         *
-         * Останавливает сервер через деструктор базового класса.
-         */
         virtual ~moonshine_web_server() = default;
 
         /**
          * @brief Установить функцию получения состояния системы
          *
-         * Функция общая для всех экземпляров: сервер контента создаётся заново
-         * при каждом переключении с сервера настроек.
+         * Функция общая для всех экземпляров сервера контента.
          *
          * @param getter Функция, возвращающая settings::moonshine::state_t
          */
         static void set_state_getter(state_getter_t getter);
+
+        /**
+         * @brief Погасить только HTTP-сервер, оставив Wi-Fi поднятым
+         */
+        void stop_http_only();
+
+        /**
+         * @brief Поднять HTTP-сервер без инициализации Wi-Fi
+         */
+        void start_http_only();
 
     protected:
         /**
@@ -126,9 +130,33 @@ namespace webui
     };
 
     /**
+     * @brief Сервер настроек Moonshine
+     *
+     * Библиотечный etl::webui::server_setup с возможностью поднять и погасить только
+     * HTTP-сервер: при переключении режима Wi-Fi не переинициализируется, поэтому
+     * точка доступа не пропадает из списка сетей.
+     */
+    class moonshine_settings_server : public etl::webui::server_setup
+    {
+    public:
+        explicit moonshine_settings_server(const etl::webui::server_config_t& cfg = make_default_config());
+
+        /**
+         * @brief Погасить только HTTP-сервер, оставив Wi-Fi поднятым
+         */
+        void stop_http_only();
+
+        /**
+         * @brief Поднять HTTP-сервер без инициализации Wi-Fi
+         */
+        void start_http_only();
+    };
+
+    /**
      * @brief Менеджер веб-серверов Moonshine
      *
-     * Переключает сервер контента (web-ui) и сервер настроек (сеть, тема, шрифт).
+     * Держит оба сервера и переключает их HTTP-часть, не трогая Wi-Fi: точка доступа
+     * поднимается один раз при старте и остаётся поднятой до перезагрузки контроллера.
      * Переключение выполняется из loop(), после того как сервер отправил ответ клиенту:
      * останавливать сервер внутри его же обработчика HTTP нельзя.
      */
@@ -137,6 +165,13 @@ namespace webui
     public:
         explicit moonshine_web_manager(const etl::webui::device_info_t& device_info);
         virtual ~moonshine_web_manager();
+
+        /**
+         * @brief Первый запуск: поднять Wi-Fi и запустить нужный сервер
+         * @param settings_mode true - сервер настроек, false - сервер контента
+         * @return true при успешном запуске
+         */
+        bool start(bool settings_mode);
 
         /**
          * @brief Запросить переключение на сервер настроек
@@ -167,8 +202,26 @@ namespace webui
          */
         virtual etl::shared_ptr<etl::webui::web_server_base_t> on_create_settings() override;
 
-        volatile bool m_settings_requested = false;  ///< Запрошен сервер настроек
-        volatile bool m_content_requested = false;   ///< Запрошен сервер контента
+        /**
+         * @brief Создать оба сервера, если они ещё не созданы
+         */
+        void ensure_servers();
+
+        /**
+         * @brief Активировать сервер контента (Wi-Fi не трогается)
+         */
+        void activate_content();
+
+        /**
+         * @brief Активировать сервер настроек (Wi-Fi не трогается)
+         */
+        void activate_settings();
+
+        etl::shared_ptr<moonshine_web_server> m_content;       ///< Сервер контента
+        etl::shared_ptr<moonshine_settings_server> m_settings; ///< Сервер настроек
+        bool m_settings_active = false;                        ///< Активен сервер настроек
+        volatile bool m_settings_requested = false;            ///< Запрошен сервер настроек
+        volatile bool m_content_requested = false;             ///< Запрошен сервер контента
     };
 
 } // namespace webui

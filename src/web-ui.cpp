@@ -263,20 +263,20 @@ namespace webui
     {
         Serial.println(F("[WebUI] API: /api/settings"));
 
-        // При переключении точка доступа перезапускается, поэтому одной перезагрузки
-        // страницы мало: стучимся в "/" до первого успешного ответа нового сервера
+        // Wi-Fi при переключении не трогается, но HTTP-сервер пересоздаётся:
+        // стучимся в "/" до первого успешного ответа нового сервера
         m_server->sendHeader("Cache-Control", "no-cache");
         m_server->send(200, "text/html",
             F("<html><head><meta charset=\"utf-8\"><title>Moonshine</title></head>"
               "<body style=\"font-family:sans-serif;text-align:center;padding-top:40px\">"
               "<p>Переключение на сервер настроек...</p>"
               "<p style=\"color:#7f8c8d;font-size:14px\">"
-              "Если страница не открылась, подключитесь к сети Moonshine_AP и обновите её.</p>"
+              "Если страница не открылась, обновите её через несколько секунд.</p>"
               "<script>"
               "setTimeout(function(){setInterval(function(){"
               "fetch('/',{cache:'no-store'}).then(function(r){"
               "if(r.ok){location.href='/';}}).catch(function(){});"
-              "},2000);},4000);"
+              "},1000);},1000);"
               "</script></body></html>"));
 
         // Переключение - после отправки ответа клиенту
@@ -460,35 +460,150 @@ namespace webui
         if (m_settings_requested) {
             m_settings_requested = false;
             Serial.println(F("[WebManager] Switching to settings server..."));
-            start_settings();
+            activate_settings();
             trace_connection();
         } else if (m_content_requested) {
             m_content_requested = false;
             Serial.println(F("[WebManager] Switching to content server..."));
-            start_content();
+            activate_content();
             trace_connection();
         }
     }
 
+    void moonshine_web_server::stop_http_only()
+    {
+        // Wi-Fi не трогаем: точка доступа остаётся поднятой
+        if (m_server) {
+            m_server->stop();
+            m_server.reset();
+        }
+        m_initialized = false;
+    }
+
+    void moonshine_web_server::start_http_only()
+    {
+        start_http_server();
+        m_initialized = true;
+    }
+
+    moonshine_settings_server::moonshine_settings_server(const etl::webui::server_config_t& cfg)
+        : etl::webui::server_setup(cfg)
+    {
+    }
+
+    void moonshine_settings_server::stop_http_only()
+    {
+        // Wi-Fi не трогаем: точка доступа остаётся поднятой
+        if (m_server) {
+            m_server->stop();
+            m_server.reset();
+        }
+        m_initialized = false;
+    }
+
+    void moonshine_settings_server::start_http_only()
+    {
+        start_http_server();
+        m_initialized = true;
+    }
+
+    bool moonshine_web_manager::start(bool settings_mode)
+    {
+        Serial.println(F("[WebManager] Starting..."));
+
+        // Wi-Fi поднимается один раз: AP или подключение к локальной сети
+        auto wifi = get_wifi_manager();
+        if (auto cfg = etl::webui::settings::load_wifi_config(); cfg.has_value()) {
+            wifi->update_config(cfg.value());
+        }
+        if (!wifi->begin()) {
+            Serial.println(F("[WebManager] Wi-Fi initialization failed"));
+            return false;
+        }
+
+        ensure_servers();
+        if (!m_content || !m_settings) {
+            Serial.println(F("[WebManager] Server allocation failed"));
+            return false;
+        }
+
+        if (settings_mode) {
+            activate_settings();
+        } else {
+            activate_content();
+        }
+
+        return true;
+    }
+
+    void moonshine_web_manager::ensure_servers()
+    {
+        if (!m_content) {
+            m_content = etl::make_shared<moonshine_web_server>();
+            m_content->set_wifi_manager(get_wifi_manager());
+            m_content->set_device_info(m_device_info);
+            m_content->set_on_settings_callback(on_settings_requested);
+            m_content->set_on_content_callback(on_content_requested);
+        }
+
+        if (!m_settings) {
+            auto cfg = etl::webui::settings::load_wifi_config();
+            m_settings = etl::make_shared<moonshine_settings_server>(
+                cfg.has_value() ? cfg.value() : make_default_config());
+
+            m_settings->set_wifi_manager(get_wifi_manager());
+            m_settings->set_device_info(m_device_info);
+            m_settings->set_on_settings_callback(on_settings_requested);
+            m_settings->set_on_content_callback(on_content_requested);
+        }
+    }
+
+    void moonshine_web_manager::activate_content()
+    {
+        if (!m_content) {
+            return;
+        }
+
+        if (m_settings_active && m_settings) {
+            m_settings->stop_http_only();
+            delay(20);   // дать сокету закрыться, прежде чем занять порт заново
+        }
+
+        m_content->load_settings();   // имя хоста, порт - из файловой системы
+        m_content->start_http_only();
+
+        m_settings_active = false;
+        m_server = m_content;
+    }
+
+    void moonshine_web_manager::activate_settings()
+    {
+        if (!m_settings) {
+            return;
+        }
+
+        if (!m_settings_active && m_content) {
+            m_content->stop_http_only();
+            delay(20);   // дать сокету закрыться, прежде чем занять порт заново
+        }
+
+        m_settings->load_settings();  // WiFi и настройки интерфейса - из файловой системы
+        m_settings->start_http_only();
+
+        m_settings_active = true;
+        m_server = m_settings;
+    }
+
     etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_content()
     {
-        auto server = etl::make_shared<moonshine_web_server>();
-        server->set_wifi_manager(get_wifi_manager());
-        server->set_on_settings_callback(on_settings_requested);
-        server->set_on_content_callback(on_content_requested);
-        return server;
+        ensure_servers();
+        return m_content;
     }
 
     etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_settings()
     {
-        auto cfg = etl::webui::settings::load_wifi_config();
-        auto server = etl::make_shared<etl::webui::server_setup>(
-            cfg.has_value() ? cfg.value() : make_default_config());
-
-        server->set_wifi_manager(get_wifi_manager());
-        server->set_on_settings_callback(on_settings_requested);
-        server->set_on_content_callback(on_content_requested);
-        return server;
+        ensure_servers();
+        return m_settings;
     }
 
 } // namespace webui

@@ -50,46 +50,41 @@ Firmware is built with PlatformIO + Arduino framework.
 
 ## Web UI and setup mode (as implemented)
 
-Two servers built on ETL base classes (`etl::webui`):
+Two servers built on ETL base classes (`etl::webui`), both created once at boot and kept alive for
+the whole run:
 
 - **content server** (`webui::moonshine_web_server`) — normal mode: monitoring page and JSON;
-- **settings server** (`etl::webui::server_setup`) — network, theme, font; created for the duration
-  of setup and destroyed on return, so it does not hold memory permanently.
+- **settings server** (`webui::moonshine_settings_server`) — subclass of `etl::webui::server_setup`
+  (network, theme, font) that can start and stop only its HTTP part.
 
-Switching is driven by `webui::moonshine_web_manager` (`etl::webui::web_manager`): `start_content()` /
-`start_settings()` stop the current server and start a new one, while `on_create_content()` /
-`on_create_settings()` create it.
+Switching is done by `webui::moonshine_web_manager`, which deliberately does **not** use the base
+`web_manager::start_content()` / `start_settings()`: those re-initialise Wi-Fi.
 
-1. Entering setup — `/api/settings` (⚙ button), three clicks of the hardware button, or holding the
+1. `start(settings_mode)` runs once at boot: loads the Wi-Fi config from LittleFS, brings Wi-Fi up
+   through the single ETL manager (`get_wifi_manager()`), creates both servers, activates one.
+2. Entering setup — `/api/settings` (⚙ button), three clicks of the hardware button, or holding the
    button at boot. The handler only schedules a callback (`schedule_settings_cb()`), our callback sets
-   a flag, and the switch itself is done by `handle_pending_switch()` from `loop()`: a server must not
-   be stopped from inside its own HTTP handler.
-2. `start_settings()` calls `stop()` on the old server, and the base `web_server_base_t::stop()` runs
-   `MDNS.end()`, stops the HTTP server, then `WiFi.disconnect(true)`, `WiFi.softAPdisconnect(true)`
-   and `WiFi.mode(WIFI_OFF)` — **Wi-Fi goes down**. The new server brings it back in `begin()`: empty
-   `wifi_ssid` → `Moonshine_AP` right away; non-empty → up to 10 s trying the local network, AP on
-   failure. So switching to setup restarts the access point (same SSID, 1–2 s gap; up to 10 s when the
-   saved network is unreachable) — it does not stay continuous.
-3. The switch page does not do a single redirect: it polls `/` every 2 s until the new server answers.
-4. There is one ETL Wi-Fi manager for the whole run (`set_wifi_manager()`). If each server created its
-   own, the destructor of the old server would call `manager::~manager()` → `stop()` →
-   `WiFi.mode(WIFI_OFF)` after the new server had started, killing its access point.
-5. Returning without saving — `/api/back`: on ESP32 a content callback is scheduled and the manager
-   switches back the same way (Wi-Fi restarts again); on ESP8266 the library reboots the controller
-   instead.
-6. Saving — `/api/save`: Wi-Fi settings (`/settings/wifi.cfg`) and UI settings (`/settings/ui.cfg`)
-   are written to LittleFS, the client gets the response, then `ESP.restart()`. `/api/reset` restores
-   defaults and also reboots.
+   a flag, and `handle_pending_switch()` from `loop()` performs the switch: a server must not be
+   stopped from inside its own HTTP handler.
+3. `activate_settings()` / `activate_content()` stop only the HTTP server of the previous mode
+   (`stop_http_only()`), wait 20 ms for the socket, reload settings from LittleFS and start the new
+   HTTP server (`start_http_only()`). **Wi-Fi is never touched**: the access point stays up and the
+   client stays associated — only the TCP connection to port 80 is dropped.
+4. The switch page polls `/` every second until the new server answers, then navigates.
+5. Returning without saving — `/api/back`: the library schedules a content callback, our flag is set,
+   and `activate_content()` runs the same non-disruptive switch.
+6. Saving — `/api/save`: Wi-Fi (`/settings/wifi.cfg`) and UI (`/settings/ui.cfg`) settings are written
+   to LittleFS, the client gets the response, then `ESP.restart()`. `/api/reset` restores defaults and
+   reboots as well.
 7. After a reboot `setup()` calls `start_web_ui(button_held)`: settings are read from LittleFS and
-   either the settings server (button held) or the web UI starts. Then `manager::begin()`: non-empty
-   `wifi_ssid` → connect to the local network, and on success `WiFi.mode(WIFI_AP_STA)`, but `softAP()`
-   is not called — there is no access point, access is only through the address on the local network;
-   otherwise AP mode.
+   either the settings server (button held) or the web UI starts. Wi-Fi mode: empty `wifi_ssid` →
+   `Moonshine_AP`; non-empty → connect to the local network, and on success `WiFi.mode(WIFI_AP_STA)`
+   without calling `softAP()` (no access point, only the LAN address); on failure AP mode.
 8. mDNS `moonshine.local` comes up in both AP and STA; the `http` service is registered by the Wi-Fi
-   manager itself, our servers must not add it.
+   manager itself — our servers must not add it.
 
-If a gap-free AP is ever needed, `stop()` must be overridden in both servers: shut down only the HTTP
-server and mDNS, leaving Wi-Fi alone.
+Never use `web_server_base_t::stop()` for switching: it turns Wi-Fi off (`WiFi.mode(WIFI_OFF)`),
+which kills the access point. Use the `*_http_only()` helpers instead.
 
 ## Style
 
