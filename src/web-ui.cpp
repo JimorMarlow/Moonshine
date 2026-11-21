@@ -247,10 +247,9 @@ namespace webui
         Serial.print(F("[WebUI] HTTP server started on port "));
         Serial.println(port);
 
-        // mDNS: доступ по имени хоста
-        if (init_mdns(get_hostname())) {
-            MDNS.addService("http", "tcp", port);
-        }
+        // mDNS: сервис http регистрирует WiFi-менеджер при старте,
+        // здесь только проверяем, что имя хоста слушается
+        init_mdns(get_hostname());
     }
 
     moonshine_web_server::state_getter_t moonshine_web_server::s_state_getter = nullptr;
@@ -264,13 +263,21 @@ namespace webui
     {
         Serial.println(F("[WebUI] API: /api/settings"));
 
-        // Клиент дождётся переключения и обновит страницу уже с сервера настроек
+        // При переключении точка доступа перезапускается, поэтому одной перезагрузки
+        // страницы мало: стучимся в "/" до первого успешного ответа нового сервера
         m_server->sendHeader("Cache-Control", "no-cache");
         m_server->send(200, "text/html",
-            F("<html><head><meta charset=\"utf-8\">"
-              "<meta http-equiv=\"refresh\" content=\"3;url=/\"></head>"
-              "<body style=\"font-family:sans-serif\">"
-              "Переключение на сервер настроек...</body></html>"));
+            F("<html><head><meta charset=\"utf-8\"><title>Moonshine</title></head>"
+              "<body style=\"font-family:sans-serif;text-align:center;padding-top:40px\">"
+              "<p>Переключение на сервер настроек...</p>"
+              "<p style=\"color:#7f8c8d;font-size:14px\">"
+              "Если страница не открылась, подключитесь к сети Moonshine_AP и обновите её.</p>"
+              "<script>"
+              "setTimeout(function(){setInterval(function(){"
+              "fetch('/',{cache:'no-store'}).then(function(r){"
+              "if(r.ok){location.href='/';}}).catch(function(){});"
+              "},2000);},4000);"
+              "</script></body></html>"));
 
         // Переключение - после отправки ответа клиенту
         schedule_settings_cb();
@@ -404,6 +411,19 @@ namespace webui
     // Менеджер один на прошивку: callback'и серверов - обычные функции без контекста
     static moonshine_web_manager* s_manager = nullptr;
 
+    // WiFi-менеджер тоже один на всё время работы. Если каждый сервер создаёт свой,
+    // при переключении деструктор старого сервера освобождает его manager, а
+    // manager::~manager() вызывает stop() и гасит точку доступа нового сервера.
+    static etl::shared_ptr<etl::wifi::manager> s_wifi_manager;
+
+    static etl::shared_ptr<etl::wifi::manager> get_wifi_manager()
+    {
+        if (!s_wifi_manager) {
+            s_wifi_manager = etl::make_shared<etl::wifi::manager>(make_default_config());
+        }
+        return s_wifi_manager;
+    }
+
     static void on_settings_requested()
     {
         if (s_manager) s_manager->request_settings();
@@ -453,6 +473,7 @@ namespace webui
     etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_content()
     {
         auto server = etl::make_shared<moonshine_web_server>();
+        server->set_wifi_manager(get_wifi_manager());
         server->set_on_settings_callback(on_settings_requested);
         server->set_on_content_callback(on_content_requested);
         return server;
@@ -464,6 +485,7 @@ namespace webui
         auto server = etl::make_shared<etl::webui::server_setup>(
             cfg.has_value() ? cfg.value() : make_default_config());
 
+        server->set_wifi_manager(get_wifi_manager());
         server->set_on_settings_callback(on_settings_requested);
         server->set_on_content_callback(on_content_requested);
         return server;
