@@ -191,6 +191,14 @@ namespace webui
          */
         void handle_pending_switch();
 
+        /**
+         * @brief Вывести в Serial, какой сервер сейчас работает
+         *
+         * В отличие от etl::webui::web_manager::trace_connection(), тип сервера берётся
+         * не из режима Wi-Fi (в AP оба сервера выглядят одинаково), а из реального состояния.
+         */
+        void trace_active_server() const;
+
     protected:
         /**
          * @brief Создать сервер контента

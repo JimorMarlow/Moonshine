@@ -263,8 +263,9 @@ namespace webui
     {
         Serial.println(F("[WebUI] API: /api/settings"));
 
-        // Wi-Fi при переключении не трогается, но HTTP-сервер пересоздаётся:
-        // стучимся в "/" до первого успешного ответа нового сервера
+        // Wi-Fi при переключении не трогается, но HTTP-сервер пересоздаётся.
+        // Ждём именно сервер настроек: /api/config есть только у него, поэтому старый
+        // сервер контента не может «поймать» опрос раньше времени.
         m_server->sendHeader("Cache-Control", "no-cache");
         m_server->send(200, "text/html",
             F("<html><head><meta charset=\"utf-8\"><title>Moonshine</title></head>"
@@ -274,7 +275,7 @@ namespace webui
               "Если страница не открылась, обновите её через несколько секунд.</p>"
               "<script>"
               "setTimeout(function(){setInterval(function(){"
-              "fetch('/',{cache:'no-store'}).then(function(r){"
+              "fetch('/api/config',{cache:'no-store'}).then(function(r){"
               "if(r.ok){location.href='/';}}).catch(function(){});"
               "},1000);},1000);"
               "</script></body></html>"));
@@ -461,29 +462,52 @@ namespace webui
             m_settings_requested = false;
             Serial.println(F("[WebManager] Switching to settings server..."));
             activate_settings();
-            trace_connection();
+            trace_active_server();
         } else if (m_content_requested) {
             m_content_requested = false;
             Serial.println(F("[WebManager] Switching to content server..."));
             activate_content();
-            trace_connection();
+            trace_active_server();
         }
+    }
+
+    void moonshine_web_manager::trace_active_server() const
+    {
+        if (!m_server) {
+            Serial.println(F("[WebManager] No active server"));
+            return;
+        }
+
+        Serial.println(F("\n=== Web Server Info ==="));
+        Serial.print(F("Server:   "));
+        Serial.println(m_settings_active ? F("Setup") : F("Content"));
+        Serial.print(F("Mode:     "));
+        Serial.println(m_server->get_mode());
+        Serial.print(F("IP:       "));
+        Serial.println(m_server->get_ip_address());
+        Serial.print(F("Hostname: http://"));
+        Serial.println(m_server->get_hostname());
+        Serial.println(F("========================\n"));
     }
 
     void moonshine_web_server::stop_http_only()
     {
+        Serial.println(F("[WebUI] stopping HTTP server"));
         // Wi-Fi не трогаем: точка доступа остаётся поднятой
         if (m_server) {
             m_server->stop();
             m_server.reset();
         }
         m_initialized = false;
+        Serial.printf("[WebUI] HTTP server stopped, heap=%u\n", (unsigned)ESP.getFreeHeap());
     }
 
     void moonshine_web_server::start_http_only()
     {
+        Serial.printf("[WebUI] starting HTTP server, heap=%u\n", (unsigned)ESP.getFreeHeap());
         start_http_server();
         m_initialized = true;
+        Serial.printf("[WebUI] HTTP server started, heap=%u\n", (unsigned)ESP.getFreeHeap());
     }
 
     moonshine_settings_server::moonshine_settings_server(const etl::webui::server_config_t& cfg)
@@ -493,18 +517,22 @@ namespace webui
 
     void moonshine_settings_server::stop_http_only()
     {
+        Serial.println(F("[WiFiSetup] stopping HTTP server"));
         // Wi-Fi не трогаем: точка доступа остаётся поднятой
         if (m_server) {
             m_server->stop();
             m_server.reset();
         }
         m_initialized = false;
+        Serial.printf("[WiFiSetup] HTTP server stopped, heap=%u\n", (unsigned)ESP.getFreeHeap());
     }
 
     void moonshine_settings_server::start_http_only()
     {
+        Serial.printf("[WiFiSetup] starting HTTP server, heap=%u\n", (unsigned)ESP.getFreeHeap());
         start_http_server();
         m_initialized = true;
+        Serial.printf("[WiFiSetup] HTTP server started, heap=%u\n", (unsigned)ESP.getFreeHeap());
     }
 
     bool moonshine_web_manager::start(bool settings_mode)
@@ -519,6 +547,22 @@ namespace webui
         if (!wifi->begin()) {
             Serial.println(F("[WebManager] Wi-Fi initialization failed"));
             return false;
+        }
+
+        // manager::start_ap() не проверяет результат WiFi.softAP() и печатает успех всегда,
+        // поэтому поднимаем точку доступа ещё раз и печатаем настоящий код возврата.
+        // Если предыдущая попытка не удалась - эта её исправляет.
+        if (!wifi->is_connected())
+        {
+            delay(100);
+            auto cfg = etl::webui::settings::load_wifi_config();
+            etl::webui::server_config_t ap_cfg = cfg.has_value() ? cfg.value() : make_default_config();
+
+            bool ap_started = WiFi.softAP(ap_cfg.ap_ssid, ap_cfg.ap_password);
+            Serial.printf("[WebManager] softAP(%s) = %d, mode = %d\n",
+                          ap_cfg.ap_ssid, (int)ap_started, (int)WiFi.getMode());
+            Serial.printf("[WebManager] AP IP = %s, MAC = %s\n",
+                          WiFi.softAPIP().toString().c_str(), WiFi.macAddress().c_str());
         }
 
         ensure_servers();
@@ -560,38 +604,52 @@ namespace webui
 
     void moonshine_web_manager::activate_content()
     {
+        Serial.println(F("[WebManager] activate_content()"));
+
         if (!m_content) {
+            Serial.println(F("[WebManager] content server is not created"));
             return;
         }
 
         if (m_settings_active && m_settings) {
+            Serial.println(F("[WebManager] stopping settings HTTP"));
             m_settings->stop_http_only();
-            delay(20);   // дать сокету закрыться, прежде чем занять порт заново
+            delay(100);   // дать сокету закрыться, прежде чем занять порт заново
         }
 
+        Serial.println(F("[WebManager] loading settings"));
         m_content->load_settings();   // имя хоста, порт - из файловой системы
         m_content->start_http_only();
 
         m_settings_active = false;
         m_server = m_content;
+
+        Serial.println(F("[WebManager] content server is active"));
     }
 
     void moonshine_web_manager::activate_settings()
     {
+        Serial.println(F("[WebManager] activate_settings()"));
+
         if (!m_settings) {
+            Serial.println(F("[WebManager] settings server is not created"));
             return;
         }
 
         if (!m_settings_active && m_content) {
+            Serial.println(F("[WebManager] stopping content HTTP"));
             m_content->stop_http_only();
-            delay(20);   // дать сокету закрыться, прежде чем занять порт заново
+            delay(100);   // дать сокету закрыться, прежде чем занять порт заново
         }
 
+        Serial.println(F("[WebManager] loading settings"));
         m_settings->load_settings();  // WiFi и настройки интерфейса - из файловой системы
         m_settings->start_http_only();
 
         m_settings_active = true;
         m_server = m_settings;
+
+        Serial.println(F("[WebManager] settings server is active"));
     }
 
     etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_content()

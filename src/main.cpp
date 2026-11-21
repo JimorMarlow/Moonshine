@@ -116,7 +116,8 @@ bool start_web_ui(bool start_settings) { // Moonshine web-ui
     return false;
   }
 
-  return web_manager->trace_connection();
+  web_manager->trace_active_server();
+  return true;
 }
 
 ///////////////////////////////////////////
