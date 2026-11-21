@@ -86,6 +86,21 @@ Switching is done by `webui::moonshine_web_manager`, which deliberately does **n
 Never use `web_server_base_t::stop()` for switching: it turns Wi-Fi off (`WiFi.mode(WIFI_OFF)`),
 which kills the access point. Use the `*_http_only()` helpers instead.
 
+### Interface settings on the content page
+
+`ui_config` (language, dark theme, large font, bold values) is applied by the content page itself:
+
+- `handle_root()` substitutes `${LANG}` and `${UI_CLASS}` (`dark-theme`, `large-font`,
+  `bold-values`) into the page from `get_ui_config()`;
+- texts are translated in JS with the `TR` dictionary and the `tr(key)` helper, applied through
+  `data-i18n` attributes; the helper is named `tr` because the minified code already uses `t` as a
+  local variable;
+- dark theme colours mirror the ETL setup page.
+
+Never translate: the `Moonshine` name, schematic labels (`Steam`, `Heater`, `Deflegmator`,
+`Condenser`, `Product`) and sensor designations (`Steam`, `DF.T`, `Cool.T`, `Heater`, `DF.Flow`,
+`Cool.Flow`). Headings, descriptions and status/error messages must be translated.
+
 ## Style
 
 - Do not reformat other people's files wholesale: minimal diff, same style, same names.

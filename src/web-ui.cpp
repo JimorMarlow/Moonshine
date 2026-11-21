@@ -20,7 +20,7 @@ namespace webui
     // и заменить версию в заголовке на актуальную
     static const char HTML_PAGE[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="${LANG}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -71,18 +71,51 @@ namespace webui
         .bold-btn{width:36px;height:36px;border:1px solid #bdc3c7;border-radius:6px;background:#fff;color:#2c3e50;font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
         .bold-btn:hover{background:#ecf0f1}
         .bold-btn.active{background:#3498db;color:#fff;border-color:#2980b9}
-        .bold-mode .temp-value,.bold-mode .flow-value,.bold-mode .temp-text,.bold-mode .flow-text,.bold-mode .uptime-value{font-weight:700}
+        .bold-values .temp-value,.bold-values .flow-value,.bold-values .temp-text,.bold-values .flow-text,.bold-values .uptime-value{font-weight:700}
+        /* Тёмная тема: цвета как у сервера настроек ETL */
+        body.dark-theme{background:#1C1C1E;color:#FFFFFF}
+        body.dark-theme .scheme-container,body.dark-theme .sensors-panel{background:#2C2C2E;border-color:#38383A;box-shadow:none}
+        body.dark-theme .sensor-card{background:#3A3A3C}
+        body.dark-theme .sensor-card:hover{background:#48484A}
+        body.dark-theme .sensor-title,body.dark-theme .update-time,body.dark-theme .temp-unit,body.dark-theme .flow-unit{color:#98989D}
+        body.dark-theme .temp-value,body.dark-theme .flow-value,body.dark-theme .uptime-value{color:#FFFFFF}
+        body.dark-theme .section-title,body.dark-theme .internal-header{color:#FFFFFF;border-bottom-color:#38383A}
+        body.dark-theme .uptime-card{background:#3A3A3C;border-left-color:#0A84FF}
+        body.dark-theme .bold-btn{background:#3A3A3C;border-color:#48484A;color:#98989D}
+        body.dark-theme .bold-btn:hover{background:#007AFF;border-color:#007AFF;color:#FFFFFF}
+        body.dark-theme .temp-rect,body.dark-theme .flow-value-rect{fill:#2C2C2E;stroke:#48484A}
+        body.dark-theme .heater,body.dark-theme .deflegmator,body.dark-theme .condenser{fill:#2C2C2E}
+        body.dark-theme .temp-text,body.dark-theme .flow-text{fill:#FFFFFF}
+        body.dark-theme .temp-label,body.dark-theme .flow-unit-text{fill:#98989D}
+        body.dark-theme .svg-label{fill:#FFFFFF}
+        body.dark-theme .svg-label.muted{fill:#98989D}
+        body.dark-theme .status-bar.status-ok{background:#12301D;color:#30D158;border-color:#30D158}
+        body.dark-theme .status-bar.status-warning{background:#332B0A;color:#FFD60A;border-color:#FFD60A}
+        body.dark-theme .status-bar.status-error{background:#3A1512;color:#FF453A;border-color:#FF453A}
+        /* Увеличенный шрифт */
+        body.large-font .section-title{font-size:17px}
+        body.large-font .sensor-title{font-size:14px}
+        body.large-font .temp-value{font-size:34px}
+        body.large-font .flow-value{font-size:29px}
+        body.large-font .uptime-value{font-size:34px}
+        body.large-font .temp-unit,body.large-font .flow-unit{font-size:13px}
+        body.large-font .temp-text{font-size:30px}
+        body.large-font .flow-text{font-size:28px}
+        body.large-font .flow-unit-text{font-size:14px}
+        body.large-font .temp-label{font-size:16px}
+        body.large-font .status-bar{font-size:17px}
+        body.large-font .update-time{font-size:12px}
         @media(max-width:900px){.main-panel{grid-template-columns:1fr;grid-template-rows:auto auto;height:auto}.scheme-container{height:auto;min-height:480px;aspect-ratio:530/480}.sensors-panel{height:auto;max-height:none;overflow:visible}.sensors-content{overflow-y:visible}.bold-btn{width:40px;height:40px;font-size:20px}.uptime-value{font-size:24px}}
     </style>
 </head>
-<body>
+<body class="${UI_CLASS}">
     <div class="container">
         <div class="main-panel">
             <div class="scheme-container">
                 <div class="internal-header">Moonshine v${VERSION}</div>
                 <div id="statusBar" class="status-bar status-ok">
                     <span class="status-icon" id="statusIcon">✓</span>
-                    <span id="statusText">Система работает нормально</span>
+                    <span id="statusText" data-i18n="status_ok">Система работает нормально</span>
                 </div>
                 <svg class="distillation-svg" viewBox="0 0 530 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                     <defs>
@@ -106,7 +139,7 @@ namespace webui
                         <circle cx="210" cy="400" r="2.2" class="bubble bubble-speed-1" style="animation-delay:3.6s;"/>
                         <circle cx="230" cy="408" r="1.8" class="bubble bubble-speed-1" style="animation-delay:0.9s;"/>
                     </g>
-                    <text x="225" y="402" text-anchor="middle" fill="#2c3e50" font-size="14" font-weight="500">Heater</text>
+                    <text x="225" y="402" text-anchor="middle" fill="#2c3e50" font-size="14" font-weight="500" class="svg-label">Heater</text>
                     <rect x="185" y="354" width="85" height="32" rx="3" class="temp-rect" id="rectHeater"/>
                     <text x="227.5" y="370" class="temp-text" id="valueHeaterNum">--.-°</text>
                     <rect x="195" y="405" width="60" height="12" rx="3" fill="#e74c3c" opacity="0.3"/>
@@ -115,13 +148,13 @@ namespace webui
                     <text x="225" y="32" text-anchor="middle" class="temp-label">Steam</text>
                     <path d="M 225 110 L 225 80 L 315 80 L 315 110" class="vapor-pipe" stroke="url(#vaporGradient)" fill="none"/>
                     <path d="M 315 200 L 315 240" class="product-pipe" id="productPipe"/>
-                    <text x="315" y="255" text-anchor="middle" fill="#7f8c8d" font-size="10">Product</text>
+                    <text x="315" y="255" text-anchor="middle" fill="#7f8c8d" font-size="10" class="svg-label muted">Product</text>
                     <g id="dropIndicator" transform="translate(315,270)" style="display:none"><use href="#dropShape"/></g>
                     <rect x="185" y="110" width="80" height="90" rx="5" class="deflegmator" id="deflegmator"/>
-                    <text x="225" y="155" text-anchor="middle" fill="#2c3e50" font-size="10">Deflegmator</text>
+                    <text x="225" y="155" text-anchor="middle" fill="#2c3e50" font-size="10" class="svg-label">Deflegmator</text>
                     <rect x="210" y="120" width="30" height="70" rx="3" fill="#27ae60" opacity="0.2"/>
                     <rect x="275" y="110" width="80" height="90" rx="5" class="condenser" id="condenser"/>
-                    <text x="315" y="155" text-anchor="middle" fill="#2c3e50" font-size="10">Condenser</text>
+                    <text x="315" y="155" text-anchor="middle" fill="#2c3e50" font-size="10" class="svg-label">Condenser</text>
                     <rect x="300" y="120" width="30" height="70" rx="3" fill="#3498db" opacity="0.2"/>
                     <path d="M 175 190 L 225 190 L 225 165" class="pipe water-pipe-in" id="dfWaterInPipe"/>
                     <path d="M 225 135 L 132.5 135 L 132.5 117" class="pipe water-pipe-out" id="dfWaterOutPipe"/>
@@ -155,24 +188,77 @@ namespace webui
                         <div class="uptime-value" id="cardValueUptime">00:00:00</div>
                         <button class="bold-btn" id="settingsBtn" title="Настройки сети и шрифта">⚙</button>
                     </div>
-                    <div class="section-title">Температура</div>
-                    <div class="sensor-card temp-sensor"><div class="sensor-title">Steam - Верх колонны</div><div class="temp-display"><div class="temp-value" id="cardValueSteam">--.-</div><div class="temp-unit">°C</div></div></div>
-                    <div class="sensor-card temp-sensor"><div class="sensor-title">DF.T - Дефлегматор (выход)</div><div class="temp-display"><div class="temp-value" id="cardValueDFT">--.-</div><div class="temp-unit">°C</div></div></div>
-                    <div class="sensor-card temp-sensor"><div class="sensor-title">Cool.T - Конденсер (выход)</div><div class="temp-display"><div class="temp-value" id="cardValueCoolT">--.-</div><div class="temp-unit">°C</div></div></div>
-                    <div class="sensor-card temp-sensor"><div class="sensor-title">Heater - Температура в баке</div><div class="temp-display"><div class="temp-value" id="cardValueHeater">--.-</div><div class="temp-unit">°C</div></div></div>
-                    <div class="section-title" style="margin-top:20px">Поток воды</div>
-                    <div class="sensor-card flow-sensor"><div class="sensor-title">DF.Flow - Дефлегматор</div><div style="display:flex;align-items:baseline"><div class="flow-value" id="cardValueDFFlow">0</div><div class="flow-unit">ml/min</div></div></div>
-                    <div class="sensor-card flow-sensor"><div class="sensor-title">Cool.Flow - Конденсер</div><div style="display:flex;align-items:baseline"><div class="flow-value" id="cardValueCoolFlow">0</div><div class="flow-unit">ml/min</div></div></div>
-                    <div class="update-time">Обновлено: <span id="lastUpdate">--:--:--</span></div>
+                    <div class="section-title" data-i18n="section_temperature">Температура</div>
+                    <div class="sensor-card temp-sensor"><div class="sensor-title" data-i18n="card_steam">Steam - Верх колонны</div><div class="temp-display"><div class="temp-value" id="cardValueSteam">--.-</div><div class="temp-unit">°C</div></div></div>
+                    <div class="sensor-card temp-sensor"><div class="sensor-title" data-i18n="card_dft">DF.T - Дефлегматор (выход)</div><div class="temp-display"><div class="temp-value" id="cardValueDFT">--.-</div><div class="temp-unit">°C</div></div></div>
+                    <div class="sensor-card temp-sensor"><div class="sensor-title" data-i18n="card_coolt">Cool.T - Конденсер (выход)</div><div class="temp-display"><div class="temp-value" id="cardValueCoolT">--.-</div><div class="temp-unit">°C</div></div></div>
+                    <div class="sensor-card temp-sensor"><div class="sensor-title" data-i18n="card_heater">Heater - Температура в баке</div><div class="temp-display"><div class="temp-value" id="cardValueHeater">--.-</div><div class="temp-unit">°C</div></div></div>
+                    <div class="section-title" style="margin-top:20px" data-i18n="section_flow">Поток воды</div>
+                    <div class="sensor-card flow-sensor"><div class="sensor-title" data-i18n="card_dfflow">DF.Flow - Дефлегматор</div><div style="display:flex;align-items:baseline"><div class="flow-value" id="cardValueDFFlow">0</div><div class="flow-unit">ml/min</div></div></div>
+                    <div class="sensor-card flow-sensor"><div class="sensor-title" data-i18n="card_coolflow">Cool.Flow - Конденсер</div><div style="display:flex;align-items:baseline"><div class="flow-value" id="cardValueCoolFlow">0</div><div class="flow-unit">ml/min</div></div></div>
+                    <div class="update-time"><span data-i18n="updated">Обновлено:</span> <span id="lastUpdate">--:--:--</span></div>
                 </div>
             </div>
         </div>
     </div>
     <script>
+        // Язык подставляет сервер из ui_config
+        const currentLang = '${LANG}';
+        const TR = {
+            ru: {
+                page_title: 'Moonshine — мониторинг',
+                settings_title: 'Настройки сети и шрифта',
+                status_ok: 'Система работает нормально',
+                status_no_response: 'Устройство не отвечает',
+                section_temperature: 'Температура',
+                section_flow: 'Поток воды',
+                updated: 'Обновлено:',
+                card_steam: 'Steam - Верх колонны',
+                card_dft: 'DF.T - Дефлегматор (выход)',
+                card_coolt: 'Cool.T - Конденсер (выход)',
+                card_heater: 'Heater - Температура в баке',
+                card_dfflow: 'DF.Flow - Дефлегматор',
+                card_coolflow: 'Cool.Flow - Конденсер',
+                warn_turn_on_cooling: 'Включите подачу воды в охладитель',
+                err_no_water_condenser: 'Нет воды в охладителе!',
+                warn_add_water_condenser: 'Добавьте воды в охладитель',
+                err_no_water_deflegmator: 'Нет воды в дефлегматоре!',
+                warn_add_water_deflegmator: 'Добавьте воды в дефлегматор'
+            },
+            en: {
+                page_title: 'Moonshine — monitoring',
+                settings_title: 'Network and font settings',
+                status_ok: 'System is running normally',
+                status_no_response: 'Device is not responding',
+                section_temperature: 'Temperature',
+                section_flow: 'Water flow',
+                updated: 'Updated:',
+                card_steam: 'Steam - Column top',
+                card_dft: 'DF.T - Deflegmator (outlet)',
+                card_coolt: 'Cool.T - Condenser (outlet)',
+                card_heater: 'Heater - Tank temperature',
+                card_dfflow: 'DF.Flow - Deflegmator',
+                card_coolflow: 'Cool.Flow - Condenser',
+                warn_turn_on_cooling: 'Turn on the water supply to the condenser',
+                err_no_water_condenser: 'No water in the condenser!',
+                warn_add_water_condenser: 'Add water to the condenser',
+                err_no_water_deflegmator: 'No water in the deflegmator!',
+                warn_add_water_deflegmator: 'Add water to the deflegmator'
+            }
+        };
+        function tr(key){ return (TR[currentLang] && TR[currentLang][key]) || key; }
+        function applyTranslations(){
+            document.title = tr('page_title');
+            const nodes = document.querySelectorAll('[data-i18n]');
+            for (let i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'));
+            const btn = document.getElementById('settingsBtn');
+            if (btn) btn.title = tr('settings_title');
+        }
+        applyTranslations();
         const COLOR_BLENDER=[{temp:15,color:"#2980b9"},{temp:20,color:"#3498db"},{temp:25,color:"#f1c40f"},{temp:28,color:"#e67e22"},{temp:30,color:"#e74c3c"},{temp:35,color:"#c0392b"}];
         document.getElementById("settingsBtn").addEventListener("click",function(){location="/api/settings"});
         let lastUpdateTime=Date.now(),connectionState="connected";
-        function updateConnectionState(){const e=Date.now(),t=(e-lastUpdateTime)/1e3,n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText");t>=20?(connectionState="error",n.className="status-bar status-error",o.textContent="✕",r.textContent="Устройство не отвечает"):t>=10?(connectionState="warning",n.className="status-bar status-warning",o.textContent="⚠",r.textContent="Устройство не отвечает"):connectionState="connected"}
+        function updateConnectionState(){const e=Date.now(),t=(e-lastUpdateTime)/1e3,n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText");t>=20?(connectionState="error",n.className="status-bar status-error",o.textContent="✕",r.textContent=tr('status_no_response')):t>=10?(connectionState="warning",n.className="status-bar status-warning",o.textContent="⚠",r.textContent=tr('status_no_response')):connectionState="connected"}
         setInterval(updateConnectionState,500);
         function hexToRgb(e){const t=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(e);return t?{r:parseInt(t[1],16),g:parseInt(t[2],16),b:parseInt(t[3],16)}:{r:0,g:0,b:0}}
         function rgbToString(e){return`rgb(${Math.round(e.r)},${Math.round(e.g)},${Math.round(e.b)})`}
@@ -184,7 +270,7 @@ namespace webui
         function updateDropIndicator(e){const t=document.getElementById("dropIndicator");if(!t)return;if(e<65)t.style.display="none",t.classList.remove("drop-blink-1hz","drop-blink-2hz","drop-blink-4hz");else{if(t.style.display="block",t.classList.remove("drop-blink-1hz","drop-blink-2hz","drop-blink-4hz"),e>=75)t.classList.add("drop-blink-4hz");else if(e>=70)t.classList.add("drop-blink-2hz");else t.classList.add("drop-blink-1hz")}}
         function updateHeaterBubbles(e){const t=document.querySelectorAll(".bubble");if(!t.length)return;let n="";e>90?n="bubble-speed-7":e>85?n="bubble-speed-6":e>80?n="bubble-speed-5":e>75?n="bubble-speed-4":e>70?n="bubble-speed-3":e>65?n="bubble-speed-2":e>60&&(n="bubble-speed-1"),t.forEach((e=>{e.classList.remove("bubble-speed-1","bubble-speed-2","bubble-speed-3","bubble-speed-4","bubble-speed-5","bubble-speed-6","bubble-speed-7"),n?(e.classList.add(n),e.style.display="block"):e.style.display="none"}))}
         function getColumnColors(e,t){return{low:getTempColor(e>35?35:e),high:getTempColor(t>35?35:t)}}
-        function checkRules(e){const t=[],{Heater:n,CoolFlow:o,CoolT:r,DFT:s,DFFlow:a}=e;n.value>55&&0===o.value&&t.push({type:"warning",text:"Включите подачу воды в охладитель"}),r.value>30&&(0===o.value?t.push({type:"error",text:"Нет воды в охладителе!"}):t.push({type:"warning",text:"Добавьте воды в охладитель"})),s.value>30&&(0===a.value?t.push({type:"error",text:"Нет воды в дефлегматоре!"}):t.push({type:"warning",text:"Добавьте воды в дефлегматор"}));return 0===t.length&&t.push({type:"ok",text:"Система работает нормально"}),t}
+        function checkRules(e){const t=[],{Heater:n,CoolFlow:o,CoolT:r,DFT:s,DFFlow:a}=e;n.value>55&&0===o.value&&t.push({type:"warning",text:tr('warn_turn_on_cooling')}),r.value>30&&(0===o.value?t.push({type:"error",text:tr('err_no_water_condenser')}):t.push({type:"warning",text:tr('warn_add_water_condenser')})),s.value>30&&(0===a.value?t.push({type:"error",text:tr('err_no_water_deflegmator')}):t.push({type:"warning",text:tr('warn_add_water_deflegmator')}));return 0===t.length&&t.push({type:"ok",text:tr('status_ok')}),t}
         function updateStatusBar(e){if(connectionState!=="connected")return;const t=checkRules(e),n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText"),s={error:3,warning:2,ok:1},a=t.reduce(((e,t)=>s[t.type]>s[e.type]?t:e));n.className="status-bar",n.classList.add(`status-${a.type}`),o.textContent="ok"===a.type?"✓":"warning"===a.type?"⚠":"✕",r.textContent=a.text}
         function updateSensors(e){
             if(connectionState!=="connected")return;
@@ -210,7 +296,7 @@ namespace webui
             updateDropIndicator(e.steam_temperature||20);
             updateHeaterBubbles(e.heater_temperature||20);
             updateStatusBar({Heater:{value:e.heater_temperature||20},CoolFlow:{value:e.condenser_water_flow},CoolT:{value:e.condenser_temperature||20},DFT:{value:e.deflegmater_temperature||20},DFFlow:{value:e.deflegmater_water_flow}});
-            document.getElementById("lastUpdate").textContent=new Date().toLocaleTimeString("ru-RU");
+            document.getElementById("lastUpdate").textContent=new Date().toLocaleTimeString(currentLang==="ru"?"ru-RU":"en-GB");
         }
         function fetchState(){fetch("/api/state").then((e=>e.json())).then((e=>{lastUpdateTime=Date.now();updateSensors(e)})).catch((e=>{console.error("Error fetching state:",e)}));}
         fetchState();
@@ -288,9 +374,29 @@ namespace webui
     {
         Serial.println(F("[WebUI] Serving HTML page"));
 
-        // Замена версии в HTML
+        // Настройки интерфейса: язык, тема, крупный шрифт, bold для значений
+        String lang = "ru";
+        String ui_class;
+        if (etl::optional<etl::webui::ui_config_t> ui = get_ui_config(); ui.has_value())
+        {
+            if (ui->get_language() == "en") {
+                lang = "en";
+            }
+            if (ui->is_dark_theme()) {
+                ui_class += F("dark-theme ");
+            }
+            if (ui->is_large_font()) {
+                ui_class += F("large-font ");
+            }
+            if (ui->is_use_bold_values()) {
+                ui_class += F("bold-values ");
+            }
+        }
+
         String html = FPSTR(HTML_PAGE);
         html.replace("${VERSION}", MS_VERSION_STRING);
+        html.replace("${LANG}", lang);
+        html.replace("${UI_CLASS}", ui_class);
 
         m_server->sendHeader("Content-Type", "text/html");
         m_server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
