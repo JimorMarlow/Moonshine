@@ -397,15 +397,43 @@ namespace webui
         return cfg;
     }
 
+    // Временная иконка устройства для страницы настроек.
+    // Источник - docs/images/icon_moonshine_mini.svg: пробный упрощённый вариант,
+    // его планируется заменить. При замене обновить и файл, и эту строку.
+    static const char DEVICE_ICON_SVG[] PROGMEM = R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" width="127" height="138">
+  <!-- Moonshine: колба с чипом, холодильник, Wi-Fi -->
+  <g fill="none" stroke="#1D6FC0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- колба с горловиной -->
+    <path d="M12.5 25V17.5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 19.5 17.5V25A11 11 0 1 1 12.5 25Z" fill="#FFFFFF"/>
+    <!-- жидкость -->
+    <path d="M6.3 33h19.4v3a9.7 9.7 0 0 1-19.4 0Z" fill="#B7E0FA" stroke="none"/>
+    <!-- чип в жидкости -->
+    <rect x="12" y="32" width="8" height="8" rx="1.2" fill="#FFFFFF" stroke="#1D3F6E" stroke-width="1.2"/>
+    <g stroke="#1D3F6E" stroke-width="1.2">
+      <path d="M9.6 34H12M9.6 38H12M20 34h2.4M20 38h2.4"/>
+    </g>
+    <circle cx="16" cy="36" r="1.3" fill="#1D3F6E" stroke="none"/>
+    <!-- патрубок и холодильник-пробирка -->
+    <path d="M25.2 30H30"/>
+    <rect x="30" y="18" width="9" height="24" rx="4.5" fill="#FFFFFF"/>
+    <rect x="32" y="30" width="5" height="9" rx="2.5" fill="#B7E0FA" stroke="none"/>
+    <!-- термометр -->
+    <rect x="21.8" y="12" width="4.8" height="13.5" rx="2.4" fill="#FFFFFF"/>
+    <path d="M24.2 16v7" stroke="#E8604C" stroke-width="1.6"/>
+    <circle cx="24.2" cy="25.7" r="2.7" fill="#E8604C" stroke="none"/>
+    <!-- Wi-Fi -->
+    <path d="M29 11a7 7 0 0 1 14 0"/>
+    <path d="M32 13a4.6 4.6 0 0 1 8 0"/>
+    <circle cx="36" cy="15.2" r="1.2" fill="#1D6FC0" stroke="none"/>
+  </g>
+</svg>)svg";
+
     etl::webui::device_info_t make_device_info()
     {
         etl::webui::device_info_t info;
         info.name = "Moonshine v" + String(MS_VERSION_STRING);
         info.description = "Контроль температуры дистилляционной колонны на базе ESP32";
-
-        // SVG иконка устройства (из docs/images/icon_moonshine.svg)
-        // Упрощённая иконка для встраивания в прошивку
-        info.icon_svg = F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 33.6 39.7\"><rect width=\"33.6\" height=\"39.7\" fill=\"#a2d6fd\" rx=\"4\"/><circle cx=\"16.8\" cy=\"12\" r=\"5\" fill=\"#1d436d\"/><path d=\"M16.8 18v14M12 25h9.6\" stroke=\"#1d436d\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"16.8\" cy=\"32\" r=\"2.5\" fill=\"#1d436d\"/></svg>");
+        info.icon_svg = FPSTR(DEVICE_ICON_SVG);
         return info;
     }
 
