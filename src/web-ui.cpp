@@ -1,6 +1,6 @@
 /**
  * @file web-ui.cpp
- * @brief Реализация веб-сервера Moonshine для ESP8266
+ * @brief Реализация веб-сервера Moonshine для ESP32
  * 
  * @note Для обновления макета:
  *       1. Взять актуальный HTML из docs/web-ui/qwen-distillation.xxx.html
@@ -153,7 +153,7 @@ namespace webui
                 <div class="sensors-content">
                     <div class="uptime-card">
                         <div class="uptime-value" id="cardValueUptime">00:00:00</div>
-                        <button class="bold-btn" id="boldBtn" title="Жирный шрифт для цифр">B</button>
+                        <button class="bold-btn" id="settingsBtn" title="Настройки сети и шрифта">⚙</button>
                     </div>
                     <div class="section-title">Температура</div>
                     <div class="sensor-card temp-sensor"><div class="sensor-title">Steam - Верх колонны</div><div class="temp-display"><div class="temp-value" id="cardValueSteam">--.-</div><div class="temp-unit">°C</div></div></div>
@@ -170,9 +170,7 @@ namespace webui
     </div>
     <script>
         const COLOR_BLENDER=[{temp:15,color:"#2980b9"},{temp:20,color:"#3498db"},{temp:25,color:"#f1c40f"},{temp:28,color:"#e67e22"},{temp:30,color:"#e74c3c"},{temp:35,color:"#c0392b"}];
-        let boldMode=false;
-        function toggleBoldMode(){boldMode=!boldMode;const e=document.getElementById("boldBtn"),t=document.querySelector(".container");boldMode?(e.classList.add("active"),t.classList.add("bold-mode")):(e.classList.remove("active"),t.classList.remove("bold-mode"))}
-        document.getElementById("boldBtn").addEventListener("click",toggleBoldMode);
+        document.getElementById("settingsBtn").addEventListener("click",function(){location="/api/settings"});
         let lastUpdateTime=Date.now(),connectionState="connected";
         function updateConnectionState(){const e=Date.now(),t=(e-lastUpdateTime)/1e3,n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText");t>=20?(connectionState="error",n.className="status-bar status-error",o.textContent="✕",r.textContent="Устройство не отвечает"):t>=10?(connectionState="warning",n.className="status-bar status-warning",o.textContent="⚠",r.textContent="Устройство не отвечает"):connectionState="connected"}
         setInterval(updateConnectionState,500);
@@ -222,144 +220,60 @@ namespace webui
 </html>
 )rawliteral";
 
-    moonshine_web_server::moonshine_web_server(const etl::wifi::server_config_t& cfg)
-        : m_config(cfg)
-        , m_server(m_config.port)
+    moonshine_web_server::moonshine_web_server()
+        : etl::webui::web_server_base_t(make_default_config())
     {
     }
 
-    moonshine_web_server::~moonshine_web_server()
+    void moonshine_web_server::start_http_server()
     {
-        stop();
-    }
+        Serial.println(F("[WebUI] Starting HTTP server..."));
 
-    void moonshine_web_server::stop()
-    {
-        if (!m_initialized) return;
+        const uint16_t port = get_port();
+        m_server = etl::make_shared<etl_web_server_t>(port);
 
-        Serial.println(F("[WebUI] Stopping..."));
-
-        m_server.stop();
-        MDNS.end();
-
-        WiFi.disconnect(true);
-    #ifdef ETL_ESP8266
-        WiFi.softAPdisconnect(true);
-    #endif
-        WiFi.mode(WIFI_OFF);
-
-        m_initialized = false;
-        Serial.println(F("[WebUI] Stopped"));
-    }
-
-    void moonshine_web_server::set_config(const etl::wifi::server_config_t& cfg)
-    {
-        m_config = cfg;
-    }
-
-    bool moonshine_web_server::begin()
-    {
-        Serial.println(F("[WebUI] Initializing..."));
-
-        if (m_config.wifi_ssid.length() > 0) {
-            Serial.print(F("[WebUI] Connecting to WiFi: "));
-            Serial.println(m_config.wifi_ssid);
-
-        #ifdef ETL_ESP8266
-            WiFi.hostname(m_config.hostname);
-        #elif defined(ETL_ESP32)
-            WiFi.setHostname(m_config.hostname.c_str());
-        #endif
-
-            WiFi.mode(WIFI_STA);
-            WiFi.begin(m_config.wifi_ssid.c_str(), m_config.wifi_password.c_str());
-
-            uint8_t attempts = 30;
-            while (WiFi.status() != WL_CONNECTED && attempts > 0) {
-                delay(500);
-                Serial.print(F("."));
-                attempts--;
-            }
-
-            if (WiFi.status() == WL_CONNECTED) {
-                Serial.println(F("\n[WebUI] Connected to WiFi"));
-                Serial.print(F("[WebUI] IP: "));
-                Serial.println(WiFi.localIP());
-            } else {
-                Serial.println(F("\n[WebUI] WiFi connection failed, falling back to AP"));
-                WiFi.mode(WIFI_AP);
-                WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
-                Serial.print(F("[WebUI] AP IP: "));
-                Serial.println(WiFi.softAPIP());
-            }
-        } else {
-            Serial.println(F("[WebUI] Starting in AP mode"));
-            WiFi.mode(WIFI_AP);
-            WiFi.softAP(m_config.ap_ssid.c_str(), m_config.ap_password.c_str());
-            Serial.print(F("[WebUI] AP IP: "));
-            Serial.println(WiFi.softAPIP());
-        }
-
-        if (MDNS.begin(m_config.hostname.c_str())) {
-            Serial.print(F("[WebUI] mDNS: http://"));
-            Serial.print(m_config.hostname);
-            Serial.println(F(".local"));
-            MDNS.addService("http", "tcp", m_config.port);
-        }
-
-        m_server.on("/", HTTP_GET, std::bind(&moonshine_web_server::handle_root, this));
-        m_server.on("/api/state", HTTP_GET, std::bind(&moonshine_web_server::handle_api_state, this));
-        m_server.on("/api/status", HTTP_GET, std::bind(&moonshine_web_server::handle_api_status, this));
-        m_server.onNotFound([]() {
-            Serial.println(F("[WebUI] 404 Not Found"));
+        m_server->on("/", HTTP_GET, [this]() { handle_root(); });
+        m_server->on("/api/state", HTTP_GET, [this]() { handle_api_state(); });
+        m_server->on("/api/status", HTTP_GET, [this]() { handle_api_status(); });
+        m_server->on("/api/settings", HTTP_GET, [this]() { handle_api_settings(); });
+        m_server->onNotFound([this]() {
+            Serial.print(F("[WebUI] 404 Not Found: "));
+            Serial.println(m_server->uri());
+            m_server->send(404, "text/plain", "Not Found");
         });
 
-        m_server.begin();
-        m_initialized = true;
+        m_server->begin();
 
-        Serial.println(F("[WebUI] Server started"));
-        return true;
-    }
+        Serial.print(F("[WebUI] HTTP server started on port "));
+        Serial.println(port);
 
-    void moonshine_web_server::handle_client()
-    {
-        if (!m_initialized) return;
-
-    #ifdef ETL_ESP8266
-        MDNS.update();   // на ESP32 mDNS работает в отдельной задаче, update() не нужен
-    #endif
-
-        m_server.handleClient();
-    }
-
-
-    bool moonshine_web_server::is_connected() const
-    {
-        return WiFi.status() == WL_CONNECTED || WiFi.getMode() == WIFI_AP;
-    }
-
-    String moonshine_web_server::get_ip_address() const
-    {
-        if (WiFi.status() == WL_CONNECTED) {
-            return WiFi.localIP().toString();
-        }
-        return WiFi.softAPIP().toString();
-    }
-
-    String moonshine_web_server::get_mode() const
-    {
-        WiFiMode_t mode = WiFi.getMode();
-        switch (mode) {
-            case WIFI_STA: return "STA";
-            case WIFI_AP: return "AP";
-            case WIFI_AP_STA: return "STA+AP";
-            default: return "UNKNOWN";
+        // mDNS: доступ по имени хоста
+        if (init_mdns(get_hostname())) {
+            MDNS.addService("http", "tcp", port);
         }
     }
 
-    void moonshine_web_server::set_state_getter(settings::moonshine::state_t (*getter)())
+    moonshine_web_server::state_getter_t moonshine_web_server::s_state_getter = nullptr;
+
+    void moonshine_web_server::set_state_getter(state_getter_t getter)
     {
-        m_state_getter = getter;
+        s_state_getter = getter;
+    }
+
+    void moonshine_web_server::handle_api_settings()
+    {
+        Serial.println(F("[WebUI] API: /api/settings"));
+
+        // Клиент дождётся переключения и обновит страницу уже с сервера настроек
+        m_server->sendHeader("Cache-Control", "no-cache");
+        m_server->send(200, "text/html",
+            F("<html><head><meta charset=\"utf-8\">"
+              "<meta http-equiv=\"refresh\" content=\"3;url=/\"></head>"
+              "<body style=\"font-family:sans-serif\">"
+              "Переключение на сервер настроек...</body></html>"));
+
+        // Переключение - после отправки ответа клиенту
+        schedule_settings_cb();
     }
 
     void moonshine_web_server::handle_root()
@@ -370,24 +284,24 @@ namespace webui
         String html = FPSTR(HTML_PAGE);
         html.replace("${VERSION}", MS_VERSION_STRING);
 
-        m_server.sendHeader("Content-Type", "text/html");
-        m_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        m_server.send(200, "text/html", html);
+        m_server->sendHeader("Content-Type", "text/html");
+        m_server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        m_server->send(200, "text/html", html);
     }
 
     void moonshine_web_server::handle_api_state()
     {
         Serial.println(F("[WebUI] API: /api/state"));
 
-        if (m_state_getter) {
-            settings::moonshine::state_t state = m_state_getter();
+        if (s_state_getter) {
+            settings::moonshine::state_t state = s_state_getter();
             String json = state_to_json(state);
 
-            m_server.sendHeader("Content-Type", "application/json");
-            m_server.sendHeader("Cache-Control", "no-cache");
-            m_server.send(200, "application/json", json);
+            m_server->sendHeader("Content-Type", "application/json");
+            m_server->sendHeader("Cache-Control", "no-cache");
+            m_server->send(200, "application/json", json);
         } else {
-            m_server.send(500, "application/json", F("{\"error\":\"State getter not set\"}"));
+            m_server->send(500, "application/json", F("{\"error\":\"State getter not set\"}"));
         }
     }
 
@@ -396,11 +310,11 @@ namespace webui
         String json = String(F("{\"uptime_ms\":")) + millis() +
                       String(F(",\"mode\":\"")) + get_mode() +
                       String(F("\",\"ip\":\"")) + get_ip_address() +
-                      String(F("\",\"hostname\":\"")) + m_config.hostname +
+                      String(F("\",\"hostname\":\"")) + get_hostname() +
                       String(F("\"}"));
 
-        m_server.sendHeader("Content-Type", "application/json");
-        m_server.send(200, "application/json", json);
+        m_server->sendHeader("Content-Type", "application/json");
+        m_server->send(200, "application/json", json);
     }
 
     String moonshine_web_server::state_to_json(const settings::moonshine::state_t& state)
@@ -450,6 +364,109 @@ namespace webui
 
         json += String(F("}"));
         return json;
+    }
+
+    etl::webui::server_config_t make_default_config()
+    {
+        etl::webui::server_config_t cfg;
+        cfg.set_hostname("moonshine");             // Имя хоста для mDNS
+        cfg.set_ap_ssid("Moonshine_AP");           // SSID точки доступа
+        cfg.set_ap_password("moonshine123");       // Пароль точки доступа
+        cfg.set_wifi_ssid("");                     // SSID внешней Wi-Fi сети (пусто = только AP)
+        cfg.set_wifi_password("moonshine123");     // Пароль внешней Wi-Fi сети
+        cfg.port = 80;                             // Порт веб-сервера
+        cfg.update_interval = 500;                 // Интервал обновления данных (мс)
+        return cfg;
+    }
+
+    etl::webui::ui_config_t make_default_ui_config()
+    {
+        etl::webui::ui_config_t cfg;
+        cfg.set_language("ru");                    // Язык интерфейса
+        cfg.set_dark_theme(false);                 // Тёмная тема
+        cfg.set_large_font(false);                 // Увеличенный шрифт
+        cfg.set_use_bold_values(false);            // Bold шрифт для ключевых значений
+        return cfg;
+    }
+
+    etl::webui::device_info_t make_device_info()
+    {
+        etl::webui::device_info_t info;
+        info.name = "Moonshine v" + String(MS_VERSION_STRING);
+        info.description = "Контроль температуры дистилляционной колонны на базе ESP32";
+
+        // SVG иконка устройства (из docs/images/icon_moonshine.svg)
+        // Упрощённая иконка для встраивания в прошивку
+        info.icon_svg = F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 33.6 39.7\"><rect width=\"33.6\" height=\"39.7\" fill=\"#a2d6fd\" rx=\"4\"/><circle cx=\"16.8\" cy=\"12\" r=\"5\" fill=\"#1d436d\"/><path d=\"M16.8 18v14M12 25h9.6\" stroke=\"#1d436d\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"16.8\" cy=\"32\" r=\"2.5\" fill=\"#1d436d\"/></svg>");
+        return info;
+    }
+
+    // Менеджер один на прошивку: callback'и серверов - обычные функции без контекста
+    static moonshine_web_manager* s_manager = nullptr;
+
+    static void on_settings_requested()
+    {
+        if (s_manager) s_manager->request_settings();
+    }
+
+    static void on_content_requested()
+    {
+        if (s_manager) s_manager->request_content();
+    }
+
+    moonshine_web_manager::moonshine_web_manager(const etl::webui::device_info_t& device_info)
+        : etl::webui::web_manager(device_info)
+    {
+        s_manager = this;
+    }
+
+    moonshine_web_manager::~moonshine_web_manager()
+    {
+        if (s_manager == this) s_manager = nullptr;
+    }
+
+    void moonshine_web_manager::request_settings()
+    {
+        m_settings_requested = true;
+    }
+
+    void moonshine_web_manager::request_content()
+    {
+        m_content_requested = true;
+    }
+
+    void moonshine_web_manager::handle_pending_switch()
+    {
+        if (m_settings_requested) {
+            m_settings_requested = false;
+            Serial.println(F("[WebManager] Switching to settings server..."));
+            start_settings();
+            trace_connection();
+        } else if (m_content_requested) {
+            m_content_requested = false;
+            Serial.println(F("[WebManager] Switching to content server..."));
+            start_content();
+            trace_connection();
+        }
+    }
+
+    etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_content()
+    {
+        auto server = etl::make_shared<moonshine_web_server>();
+        server->set_on_settings_callback(on_settings_requested);
+        server->set_on_content_callback(on_content_requested);
+        return server;
+    }
+
+    etl::shared_ptr<etl::webui::web_server_base_t> moonshine_web_manager::on_create_settings()
+    {
+        auto cfg = etl::webui::settings::load_wifi_config();
+        auto server = etl::make_shared<etl::webui::server_setup>(
+            cfg.has_value() ? cfg.value() : make_default_config());
+
+        server->set_on_settings_callback(on_settings_requested);
+        server->set_on_content_callback(on_content_requested);
+        return server;
     }
 
 } // namespace webui

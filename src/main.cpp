@@ -1,8 +1,9 @@
 #include <Arduino.h>
 
-// Вся конфигурация и платформозависимые настройки в pinout.h
+// Вся конфигурация в pinout.h
 #include "pinout.h"
 #include "settings.h"
+#include "version.h"
 #include "etl/etl_utility.h"
 
 // Глобальные данные
@@ -82,85 +83,46 @@ volatile int btn_clicks = 0;  // для проверки нажатий кноп
 //////////////////////////////////////////////////////////////
 // WEB-UI
 #include "web-ui.h"
-// Глобальный экземпляр веб-сервера
-etl::unique_ptr<webui::MoonshineWebServer> web_server;
-etl::unique_ptr<etl::wifi::server_setup> wifi_server;
-bool use_web_ui = false;
+// Менеджер веб-серверов: в обычном режиме работает web-ui,
+// сервер настроек (сеть, тема, шрифт) запускается только по запросу
+etl::unique_ptr<webui::moonshine_web_manager> web_manager;
+bool use_web_ui = true;
 
-bool start_web_server() { // Moonshine web-ui
-  // WEB-UI
-  if(use_web_ui)
+bool start_web_ui(bool start_settings) { // Moonshine web-ui
+  if(!use_web_ui)
   {
-    wifi_server.reset();
-    webui::moonshine_server_config_t web_config = etl::wifi::settings::load_config();
-    
-    web_server = etl::make_unique<webui::moonshine_web_server>(web_config);
-    if(web_server && web_server->begin()) {
-      // Установка функции получения состояния
-      web_server->set_state_getter(get_moonshine_state);
-
-      // Вывод информации о подключении
-      Serial.println(F("\n=== Web Server Info ==="));
-      Serial.print(F("Mode: "));
-      Serial.println(web_server->get_mode());
-      Serial.print(F("IP Address: "));
-      Serial.println(web_server->get_ip_address());
-      Serial.print(F("Hostname: http://"));
-      Serial.print(web_server->get_mode() == "AP" ? web_server->get_ip_address() : "moonshine.local");
-      Serial.println(F("/"));
-      Serial.println(F("=========================\n")); 
-      return true;
-    }      
-    else {
-      Serial.println(F("[ERROR] Web server initialization failed!"));
-      return false;
-    }    
+    return false;
   }
-  return false;
-}
 
-bool start_wifi_server() { // WiFi setup
-  // setup available wi-fi points
-  if(use_web_ui)
+  // Настройки WiFi и интерфейса в энергонезависимой памяти (ETL)
+  Serial.print("[Settings] wifi init: ... ");
+  bool is_wifi_init = etl::webui::settings::init_wifi_config(webui::make_default_config());
+  Serial.println(is_wifi_init ? "OK" : "FAILED");
+  etl::webui::settings::init_ui_config(webui::make_default_ui_config());
+
+  // Функция получения состояния системы для сервера контента
+  webui::moonshine_web_server::set_state_getter(get_moonshine_state);
+
+  web_manager = etl::make_unique<webui::moonshine_web_manager>(webui::make_device_info());
+  if(!web_manager)
   {
-    web_server.reset();
-    webui::moonshine_server_config_t web_config = etl::wifi::settings::load_config();
-    
-    wifi_server = etl::make_unique<etl::wifi::server_setup>(web_config);
-    if(wifi_server && wifi_server->begin()) {
-      // Вывод информации о подключении
-      Serial.println(F("\n=== WiFi Server Info ==="));
-      Serial.print(F("Mode: "));
-      Serial.println(wifi_server->get_mode());
-      Serial.print(F("IP Address: "));
-      Serial.println(wifi_server->get_ip_address());
-      Serial.print(F("Hostname: http://"));
-      Serial.print(wifi_server->get_mode() == "AP" ? wifi_server->get_ip_address() : "moonshine.local");
-      Serial.println(F("/"));
-      Serial.println(F("=========================\n")); 
-      return true;
-    }      
-    else {
-      Serial.println(F("[ERROR] WiFi server initialization failed!"));
-      return false;
-    }    
+    return false;
   }
-  return false;
-}
 
-void toggle_seb_server() {
-  if(web_server) {
-    start_wifi_server();
+  // При зажатой кнопке при старте - сервер настроек, иначе - web-ui
+  if(start_settings) {
+    web_manager->start_settings();
+  } else {
+    web_manager->start_content();
   }
-  else {
-    start_web_server();
-  }
+
+  return web_manager->trace_connection();
 }
 
 ///////////////////////////////////////////
 void setup() {
     Serial.begin(115200);
-    if(SERIAL_INIT_DELAY > 0) delay(SERIAL_INIT_DELAY);  // для ESP32 C3 supermini нуждо сделать задержку, чтобы выводилась отладочная информация
+    if(SERIAL_INIT_DELAY > 0) delay(SERIAL_INIT_DELAY);  // задержка, чтобы отладочный вывод успевал появиться
     
     // Display
     lcd.begin();
@@ -210,16 +172,7 @@ void setup() {
 
     if(use_web_ui)
     {
-      webui::moonshine_server_config_t web_config;
-      Serial.print("[WiFi Settings] init: ... ");
-      bool is_web_settings_init = etl::wifi::settings::init_config(web_config);
-      Serial.println(is_web_settings_init ? "OK" : "FAILED");
-
-      if(is_btn_hold_on_start) {
-        start_wifi_server();
-      } else {
-        start_web_server();
-      }
+      start_web_ui(is_btn_hold_on_start);
     }
   }
 
@@ -340,16 +293,22 @@ void loop()
       }
     }
 
-    // проверка на количество кликов
+    // проверка на количество кликов - переключение на сервер настроек
     if (btn->hasClicks(3)) {
       Serial.println("has 3 clicks - start wi-fi setup");
+      if(web_manager) {
+        if(auto server = web_manager->get_server()) {
+          server->schedule_settings_cb();
+        }
+      }
     }
   }
 
-  // Обработка клиентских запросов
-  if(web_server)
+  // Обработка клиентских запросов и переключение серверов
+  if(web_manager)
   {
-    web_server->handle_client();
+    web_manager->tick();
+    web_manager->handle_pending_switch();
   }
 
 }

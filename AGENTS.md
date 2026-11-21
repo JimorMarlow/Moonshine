@@ -1,6 +1,6 @@
 # Moonshine — инструкции для агентов
 
-Контроллер ректификационной колонны на ESP8266 (NodeMCU v3): температура DS18B20,
+Контроллер ректификационной колонны на ESP32 (WROOM-38U): температура DS18B20,
 датчики потока Холла, веб-интерфейс в LittleFS. Прошивка на PlatformIO + Arduino framework.
 
 ## Сборка и проверка
@@ -8,7 +8,7 @@
 `pio` не в PATH — вызывай полный путь:
 
 ```powershell
-& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e nodemcuv3
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-wroom-38u
 ```
 
 - Перед тем как сказать «готово», собери проект этой командой и покажи итог (RAM/Flash, ошибки).
@@ -16,7 +16,7 @@
 - Прошивка и монитор требуют подключённой платы — **спроси пользователя**, прежде чем заливать:
 
 ```powershell
-& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e nodemcuv3 -t upload
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-wroom-38u -t upload
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" device monitor -b 115200
 ```
 

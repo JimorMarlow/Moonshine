@@ -1,15 +1,20 @@
 #pragma once
 /**
  * @file web-ui.h
- * @brief Веб-интерфейс мониторинга процесса дистилляции Moonshine
+ * @brief Веб-интерфейс Moonshine: сервер контента и менеджер переключения серверов
  *
- * Платформа: ESP8266 / ESP32
- * 
+ * Платформа: ESP32
+ *
  * Особенности:
- * - Комбинированный режим работы: точка доступа + подключение к Wi-Fi сети
+ * - Сервер контента (moonshine_web_server) построен на базовом классе
+ *   etl::webui::web_server_base_t из библиотеки ETL
+ * - Настройка сети, темы и шрифта выполняется редко, поэтому для неё запускается
+ *   отдельный сервер etl::webui::server_setup: в обычном режиме память под него не занята
+ * - Переключение серверов выполняет etl::webui::web_manager, в обычном режиме
+ *   всегда работает web-ui
  * - Локальное имя хоста: "moonshine"
  * - Реальное время: данные получаются из settings::moonshine::state_t
- * 
+ *
  * @note Для обновления макета веб-интерфейса:
  *       1. Взять актуальный файл из docs/web-ui/qwen-distillation.xxx.html
  *       2. Извлечь HTML/CSS/JS код
@@ -17,171 +22,75 @@
  *       4. Обновить версию в заголовке на MS_VERSION_STRING
  */
 
-#include <etl/etl_defines.h>
-
-#ifdef ETL_ESP8266
-    #include <ESP8266WiFi.h>
-    #include <ESP8266WebServer.h>
-    #include <ESP8266mDNS.h>
-#elif defined(ETL_ESP32)
-    #include <WiFi.h>
-    #include <WebServer.h>
-    #include <ESPmDNS.h>
-#endif
+#include <Arduino.h>
 
 #include "settings.h"
 #include "version.h"
-#include "etl_wifi_setup.h"   // даёт ETL_WEB_SERVER_TYPE
+
+#include <etl/etl_memory.h>
+#include <etl/etl_webui.h>
+#include <etl/etl_webui_base.h>
+#include <etl/etl_webui_settings.h>
 
 namespace webui
 {
     /**
-     * @brief Конфигурация веб-сервера Moonshine
+     * @brief Конфигурация WiFi по-умолчанию для проекта
      *
-     * Наследуется от etl::wifi::server_config_t с проектными значениями по умолчанию.
+     * Используется при инициализации настроек и сбросе к заводским значениям.
      */
-    struct moonshine_server_config_t : public etl::wifi::server_config_t
-    {
-        moonshine_server_config_t()
-        {
-            hostname = "moonshine";              // Имя хоста для mDNS
-            ap_ssid = "Moonshine_AP";            // SSID точки доступа
-            ap_password = "moonshine123";        // Пароль точки доступа
-            wifi_ssid = "";                      // SSID внешней Wi-Fi сети (пусто = только AP)
-            wifi_password = "moonshine123";      // Пароль внешней Wi-Fi сети
-            port = 80;                           // Порт веб-сервера
-            update_interval = 500;               // Интервал обновления данных (мс)
-
-            device_name = "Moonshine v" + String(MS_VERSION_STRING);   // Название устройства
-            device_description = "Контроль температуры дистилляционной колонны на базе ESP8266";  // Описание
-            
-            // SVG иконка устройства (из docs/images/icon_moonshine.svg)
-            // Упрощённая иконка для встраивания в прошивку
-            device_icon_svg = F("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 33.6 39.7\"><rect width=\"33.6\" height=\"39.7\" fill=\"#a2d6fd\" rx=\"4\"/><circle cx=\"16.8\" cy=\"12\" r=\"5\" fill=\"#1d436d\"/><path d=\"M16.8 18v14M12 25h9.6\" stroke=\"#1d436d\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"16.8\" cy=\"32\" r=\"2.5\" fill=\"#1d436d\"/></svg>");
-        }
-
-        moonshine_server_config_t(const etl::wifi::server_config_t& cfg)
-        {
-            hostname = cfg.hostname;
-            ap_ssid = cfg.ap_ssid;
-            ap_password = cfg.ap_password;
-            wifi_ssid = cfg.wifi_ssid;
-            wifi_password = cfg.wifi_password;
-            port = cfg.port;
-            update_interval = cfg.update_interval;
-            device_name = cfg.device_name;
-            device_description = cfg.device_description;
-            device_icon_svg = cfg.device_icon_svg;
-        }
-
-        moonshine_server_config_t& operator=(const etl::wifi::server_config_t& cfg)
-        {
-            if (this != &static_cast<const moonshine_server_config_t&>(cfg)) {
-                hostname = cfg.hostname;
-                ap_ssid = cfg.ap_ssid;
-                ap_password = cfg.ap_password;
-                wifi_ssid = cfg.wifi_ssid;
-                wifi_password = cfg.wifi_password;
-                port = cfg.port;
-                update_interval = cfg.update_interval;
-                device_name = cfg.device_name;
-                device_description = cfg.device_description;
-                device_icon_svg = cfg.device_icon_svg;
-            }
-            return *this;
-        }
-    };
+    etl::webui::server_config_t make_default_config();
 
     /**
-     * @brief Класс веб-сервера Moonshine
-     *
-     * Предоставляет веб-интерфейс мониторинга процесса дистилляции.
-     * Работает в режиме точки доступа или подключается к существующей Wi-Fi сети.
+     * @brief Конфигурация интерфейса по-умолчанию для проекта
      */
-    class moonshine_web_server
+    etl::webui::ui_config_t make_default_ui_config();
+
+    /**
+     * @brief Информация об устройстве для веб-серверов
+     *
+     * В энергонезависимой памяти не хранится: при обновлении прошивки
+     * название и описание устройства обновляются автоматически.
+     */
+    etl::webui::device_info_t make_device_info();
+
+    /**
+     * @brief Сервер контента: веб-интерфейс мониторинга процесса дистилляции
+     *
+     * Предоставляет страницу мониторинга и JSON с текущими показаниями датчиков.
+     * Wi-Fi и mDNS обслуживаются базовым классом ETL.
+     */
+    class moonshine_web_server : public etl::webui::web_server_base_t
     {
     public:
-        /**
-         * @brief Конструктор
-         * @param cfg Конфигурация веб-сервера
-         */
-        explicit moonshine_web_server(const etl::wifi::server_config_t& cfg = moonshine_server_config_t());
+        /// Тип функции получения состояния системы
+        using state_getter_t = settings::moonshine::state_t (*)();
+
+        moonshine_web_server();
 
         /**
-         * @brief Деструктор
+         * @brief Виртуальный деструктор
          *
-         * Виртуальный деструктор для корректного наследования
+         * Останавливает сервер через деструктор базового класса.
          */
-        virtual ~moonshine_web_server();
-
-        /**
-         * @brief Инициализация веб-сервера
-         *
-         * - Настройка сети (AP или STA+AP)
-         * - Регистрация обработчиков HTTP
-         * - Запуск сервера
-         *
-         * @return true при успешной инициализации
-         */
-        virtual bool begin();
-
-        /**
-         * @brief Основной цикл обработки
-         *
-         * Вызывать регулярно из loop() для обработки клиентских запросов
-         */
-        virtual void handle_client();
-
-        /**
-         * @brief Остановка веб-сервера
-         *
-         * Виртуальный метод для корректного наследования
-         *
-         * - Остановка HTTP сервера
-         * - Отключение mDNS
-         * - Отключение WiFi
-         * - Сброс флага инициализации
-         */
-        virtual void stop();
-
-        /**
-         * @brief Проверка подключения к сети
-         * @return true если подключено (AP или STA)
-         */
-        virtual bool is_connected() const;
-
-        /**
-         * @brief Получить IP адрес
-         * @return IP адрес в формате String
-         */
-        virtual String get_ip_address() const;
-
-        /**
-         * @brief Получить режим работы
-         * @return "AP" если только точка доступа, "STA" если клиент, "STA+AP" если оба режима
-         */
-        virtual String get_mode() const;
+        virtual ~moonshine_web_server() = default;
 
         /**
          * @brief Установить функцию получения состояния системы
+         *
+         * Функция общая для всех экземпляров: сервер контента создаётся заново
+         * при каждом переключении с сервера настроек.
+         *
          * @param getter Функция, возвращающая settings::moonshine::state_t
          */
-        virtual void set_state_getter(settings::moonshine::state_t (*getter)());
-
-        /**
-         * @brief Установить конфигурацию сервера
-         * @param cfg Новая конфигурация
-         * @note Должно быть вызвано до begin()
-         */
-        virtual void set_config(const etl::wifi::server_config_t& cfg);
-
-        /**
-         * @brief Получить текущую конфигурацию
-         * @return Конфигурация сервера
-         */
-        virtual const etl::wifi::server_config_t& get_config() const { return m_config; }
+        static void set_state_getter(state_getter_t getter);
 
     protected:
+        /**
+         * @brief Запуск HTTP сервера и регистрация обработчиков
+         */
+        virtual void start_http_server() override;
+
         /**
          * @brief Обработчик корневой страницы
          * Отдаёт HTML страницу веб-интерфейса
@@ -201,60 +110,65 @@ namespace webui
         virtual void handle_api_status();
 
         /**
+         * @brief Обработчик запроса на сервер настроек
+         * Отдаёт страницу переключения, затем запрашивает сервер настроек
+         */
+        virtual void handle_api_settings();
+
+        /**
          * @brief Генерация JSON из состояния системы
          * @param state Состояние системы
          * @return JSON строка
          */
         virtual String state_to_json(const settings::moonshine::state_t& state);
 
-        etl::wifi::server_config_t m_config;        ///< Конфигурация (базовый тип)
-        ETL_WEB_SERVER_TYPE m_server;                  ///< Веб-сервер
-        settings::moonshine::state_t (*m_state_getter)() = nullptr;  ///< Функция получения состояния
-        bool m_initialized = false;                 ///< Флаг инициализации
+        static state_getter_t s_state_getter;  ///< Функция получения состояния
     };
 
-    // Глобальный тип для удобства
-    using MoonshineWebServer = moonshine_web_server;
+    /**
+     * @brief Менеджер веб-серверов Moonshine
+     *
+     * Переключает сервер контента (web-ui) и сервер настроек (сеть, тема, шрифт).
+     * Переключение выполняется из loop(), после того как сервер отправил ответ клиенту:
+     * останавливать сервер внутри его же обработчика HTTP нельзя.
+     */
+    class moonshine_web_manager : public etl::webui::web_manager
+    {
+    public:
+        explicit moonshine_web_manager(const etl::webui::device_info_t& device_info);
+        virtual ~moonshine_web_manager();
+
+        /**
+         * @brief Запросить переключение на сервер настроек
+         * @note Вызывается из callback'а сервера, только выставляет флаг
+         */
+        void request_settings();
+
+        /**
+         * @brief Запросить переключение на сервер контента
+         * @note Вызывается из callback'а сервера, только выставляет флаг
+         */
+        void request_content();
+
+        /**
+         * @brief Выполнить отложенное переключение серверов
+         * @note Вызывать в loop() после tick()
+         */
+        void handle_pending_switch();
+
+    protected:
+        /**
+         * @brief Создать сервер контента
+         */
+        virtual etl::shared_ptr<etl::webui::web_server_base_t> on_create_content() override;
+
+        /**
+         * @brief Создать сервер настроек
+         */
+        virtual etl::shared_ptr<etl::webui::web_server_base_t> on_create_settings() override;
+
+        volatile bool m_settings_requested = false;  ///< Запрошен сервер настроек
+        volatile bool m_content_requested = false;   ///< Запрошен сервер контента
+    };
 
 } // namespace webui
-
-/**
- * @brief Пример использования в main.cpp:
- *
- * @code
- * #include "web-ui.h"
- *
- * // Функция получения состояния (реализовать в main.cpp)
- * settings::moonshine::state_t get_state();
- *
- * webui::moonshine_web_server web_server;
- * webui::moonshine_server_config_t web_config;
- *
- * void setup() {
- *     Serial.begin(115200);
- *
- *     // Настройка конфигурации
- *     web_config.hostname = "moonshine";
- *     web_config.ap_ssid = "Moonshine_AP";
- *     web_config.ap_password = "moonshine123";
- *     web_config.wifi_ssid = "MyWiFi";           // опционально
- *     web_config.wifi_password = "MyPassword";   // опционально
- *
- *     // Установка конфигурации и инициализация
- *     web_server.set_config(web_config);
- *     if (web_server.begin()) {
- *         Serial.println("Web server started");
- *         Serial.print("IP: ");
- *         Serial.println(web_server.get_ip_address());
- *     }
- *
- *     // Установка функции получения состояния
- *     web_server.set_state_getter(get_state);
- * }
- *
- * void loop() {
- *     web_server.handle_client();
- *     // ... остальная логика
- * }
- * @endcode
- */

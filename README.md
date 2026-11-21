@@ -2,17 +2,17 @@
 Temperature and water flow control
 
 ## Оборудование
-- Датичики температуры DS18B20
+- Датчики температуры DS18B20
     - (Tank) Температура внутри бака D8 с резьбой 1/2" 
     - (WaterOut) 2x Трехпроводные датчики для измерения температуры воды на выходе
         - df-out, °C
         - condenser-out, °C
     - 
-- Датичики Холла для измерения потока воды (пока только счетчик срабатываний за 10с и за 1мин, без учета потока)
+- Датчики Холла для измерения потока воды (пока только счетчик срабатываний за 10с и за 1мин, без учета потока)
     - из дефлегматора (df)
     - из охладителя (condenser)
-- NodeMCU v3 Pinout <br><img src="docs\nodemcu_v3_pinout.png" alt="NodeMCU v3 Pinout" width="500">
-- ESP32-WROOM-32 Pinout <br><img src="docs\images\eps32U-pinout.png" alt="ESP32-WROOM-32 Pinout" width="500">
+- ESP32-WROOM-32 Pinout <br><img src="docs/images/eps32U-pinout.png" alt="ESP32-WROOM-32 Pinout" width="500">
+- NodeMCU v3 Pinout — плата не используется, снимок в архиве <br><img src="docs/hystory/nodemcu_v3_pinout.png" alt="NodeMCU v3 Pinout" width="500">
 
 
 ## Названия переменных
@@ -72,7 +72,7 @@ SEN-HZ06D выдает 5V импульсы, а ESP32 работает с 3.3V л
 
 #### Схема коммутации
 
-- ESP32-WROOM-32 Scheme <br><img src="docs\wokwi\wire-esp32-v4.png" alt="ESP32-WROOM-32 Scheme">
+- ESP32-WROOM-32 Scheme <br><img src="docs/wokwi/wire-esp32-v4.png" alt="ESP32-WROOM-32 Scheme">
 
 ### Распиновка контактов
 
@@ -246,13 +246,12 @@ sensor_t - обвязка вокруг GyverDS18 для опроса датчи�
 - Уменьшил скорость индикатора потока на порядок для более плавной анимации. Возможно, нужно будет еще сделать меньше.
 - Купил более чувствительные датчики потока "SEN-HZ06D DC5V Small Size Mini Water Flow Sensor Fluid Flow Meter Switch 0.05-1.5L/min For Coffee Machine", буду добавлять в макет
 https://ali.click/ktwszq
-<br><img src="docs\SEN-HZ06D DC5V Small Size Mini Water Flow Sensor Fluid Flow Meter Switch 0.05-1.5L-min.webp" alt="SEN-HZ06D" width="200">
-- С помощью qwen 3.5 сделал макет Web-UI для показа текущего состояния [qwen-distillation](docs\web-ui\qwen-distillation.021.html)
+<br><img src="docs/sensors/SEN-HZ06D%20DC5V%20Small%20Size%20Mini%20Water%20Flow%20Sensor%20Fluid%20Flow%20Meter%20Switch%200.05-1.5L-min.webp" alt="SEN-HZ06D" width="200">
+- С помощью qwen 3.5 сделал макет Web-UI для показа текущего состояния [qwen-distillation](docs/hystory/qwen-distillation.045.html)
 - Сделал первый макет разводки PCB платы в EasyEDA. Вместо датчика температуры 3pin и датчика потока 3pin принял решение делать комбинированный pogo 5pin разъем.
-- для соединения основной платы и контактной панели с разъемами для датчиков планирую использовать двойной 10pin шлейф <br><img src="docs\DC3_10p_connector_x2.webp" alt="DC3_10p_connector_x2" width="300">
+- для соединения основной платы и контактной панели с разъемами для датчиков планирую использовать двойной 10pin шлейф <br><img src="docs/sensors/DC3_10p_connector_x2.webp" alt="DC3_10p_connector_x2" width="300">
 
 #### 1.0.31 Добавил макет web-ui с помощью qwen 3.5
-Инструкция по установке docs\qwen_install.md
 
 #### 1.1.1 settings::moonshine::state_t
 Начал оборачивать все данные в нормальные структуры...
@@ -269,7 +268,7 @@ https://ali.click/ktwszq
 - **Файлы:**
   - `src/web-ui.h` — объявление веб-сервера
   - `src/web-ui.cpp` — реализация сервера с HTML шаблоном
-  - `src/main_ui.cpp` — пример инициализации
+  - `docs/hystory/main_ui.cpp.md` — пример инициализации
 - **API:**
   - `GET /` — HTML страница мониторинга
   - `GET /api/state` — JSON с текущими показаниями датчиков
@@ -306,8 +305,8 @@ void loop() {
 - Заменил чип, чтобы было больше разъемов и можно было подключить графический экран потом с энкодером
 - Сделал схему в wokwi https://wokwi.com/projects/478560883984119809
 - Схема подключения: 
-    - docs\wokwi\wokwi-Moonshine_02.zip
-    - docs\wokwi\wire-esp32-v2.png
+    - docs/wokwi/wokwi-Moonshine_02.zip
+    - docs/wokwi/wire-esp32-v2.png
 
 #### 1.3.1 Переход на ESP32-WROOM - fixes
 
@@ -316,7 +315,7 @@ web-ui - updated to ESP32/ESP8266 compatibility
 #### 1.3.- Поменял схему подключения ESP32-WROOM и файл readme.md
 
 На память - информация о подключении графического дисплея
-docs\ST7789 320x240 EC11 Rotary Encoder Button.md
+docs/ST7789 320x240 EC11 Rotary Encoder Button.md
 
 #### 1.3.3 GyverLCD_UTF8 20x4, etl::vector в wifi-setup, ESP32 на Arduino core 3.x
 
@@ -344,3 +343,23 @@ docs\ST7789 320x240 EC11 Rotary Encoder Button.md
 > pio run -e esp32-wroom-38u -t erase      # очистка флеша (данные LittleFS пропадут)
 > pio run -e esp32-wroom-38u -t upload
 > ```
+
+#### 1.4.0 Веб-интерфейс на базовых классах ETL: сервер контента и сервер настроек
+
+- `webui::moonshine_web_server` теперь наследует `etl::webui::web_server_base_t`: Wi-Fi, mDNS, загрузка настроек, `tick()` и остановка берутся из библиотеки.
+- Добавлен `webui::moonshine_web_manager` (`etl::webui::web_manager`) — переключает сервер контента и сервер настроек. В обычном режиме работает web-ui, а сервер настроек (`etl::webui::server_setup`) поднимается только по запросу: сеть, тема и шрифт настраиваются редко, держать память под них постоянно незачем.
+- Настройки Wi-Fi хранятся через `etl::webui::settings::init_wifi_config` / `load_wifi_config`.
+- Удалены локальные `src/etl_wifi_setup.h`, `src/etl_wifi_setup.cpp`, `src/etl_wifi_setup_html.h` — 1817 строк, заменены библиотечными.
+- Исправлено падение `assert failed: multi_heap_free` при старте: структура со `String` больше не сохраняется в файл сырыми байтами.
+- Переключение серверов выполняется из `loop()` после ответа клиенту, а не внутри HTTP-обработчика, где сервер уничтожался на своём же стеке.
+- Вход в настройки: кнопка ⚙ на странице, три клика аппаратной кнопкой, удержание кнопки при старте.
+- Формат `/settings/wifi.cfg` изменился — после прошивки сеть нужно настроить заново.
+
+#### 1.5.0 Только ESP32 WROOM-38U, чистка pinout.h, архив документов
+
+- Оставлено одно окружение `esp32-wroom-38u`, окружение `nodemcuv3` (espressif8266) удалено: плата ESP8266 вышла из строя, возврат к ней не планируется.
+- `src/pinout.h` сокращён с 73 до 29 строк: убраны ветка ESP8266, макросы `BOARD_*`, неиспользуемый `version.h` и `#error` для неизвестной платформы. Фактические GPIO не менялись.
+- Из интерфейса убрана кнопка «B»: режим жирных цифр переносится в настройки (`ui_config.use_bold_values`).
+- Устаревшие ТЗ, журнал изменений и макеты перенесены в `docs/hystory` (через `git mv`), добавлен указатель `docs/hystory/README.md`.
+- `AGENTS.md` и этот файл переведены на ESP32 WROOM-38U.
+- Сборка: RAM 15.7% (51416 из 327680), Flash 37.9% (1192244 из 3145728).
