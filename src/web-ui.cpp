@@ -119,9 +119,9 @@ namespace webui
                 </div>
                 <svg class="distillation-svg" viewBox="0 0 530 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                        <linearGradient id="columnGradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#e74c3c" id="colStopLow"/><stop offset="100%" stop-color="#f39c12" id="colStopHigh"/></linearGradient>
-                        <linearGradient id="vaporGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#e67e22" id="vapStopLow"/><stop offset="100%" stop-color="#3498db" id="vapStopHigh"/></linearGradient>
-                        <linearGradient id="dfOutGradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#3498db" id="dfOutStopLow"/><stop offset="100%" stop-color="#f39c12" id="dfOutStopHigh"/></linearGradient>
+                        <linearGradient id="columnGradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#3498db" id="colStopLow"/><stop offset="100%" stop-color="#3498db" id="colStopHigh"/></linearGradient>
+                        <linearGradient id="vaporGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3498db" id="vapStopLow"/><stop offset="100%" stop-color="#3498db" id="vapStopHigh"/></linearGradient>
+                        <linearGradient id="dfOutGradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#3498db" id="dfOutStopLow"/><stop offset="100%" stop-color="#3498db" id="dfOutStopHigh"/></linearGradient>
                         <linearGradient id="coolOutGradient" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#3498db" id="coolOutStopLow"/><stop offset="100%" stop-color="#3498db" id="coolOutStopHigh"/></linearGradient>
                         <g id="warningSymbol"><path d="M 0,-11 L 9,6 L -9,6 Z" fill="#f1c40f" stroke="#d35400" stroke-width="1"/><path d="M 0,-5 L 0,1" stroke="#2c3e50" stroke-width="2.5" stroke-linecap="round"/><circle cx="0" cy="4" r="1.2" fill="#2c3e50"/></g>
                         <path id="dropShape" d="M 0,0 Q -4,-4 0,-10 Q 4,-4 0,0" fill="#3498db" opacity="0.8"/>
@@ -250,7 +250,7 @@ namespace webui
         function applyTranslations(){
             document.title = tr('page_title');
             const nodes = document.querySelectorAll('[data-i18n]');
-            for (let i = 0; i < nodes.length; i++) nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'));
+            for (let i = 0; i < nodes.length; i++) nodes[i].textContent = tr(nodes[i].getAttribute('data-i18n'));
             const btn = document.getElementById('settingsBtn');
             if (btn) btn.title = tr('settings_title');
         }
