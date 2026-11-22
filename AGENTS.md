@@ -4,6 +4,25 @@ Rectification column controller on ESP32 (WROOM-38U): DS18B20 temperature sensor
 Hall-effect water flow sensors, web interface (page in PROGMEM), settings in LittleFS.
 Firmware is built with PlatformIO + Arduino framework.
 
+## Canary
+
+Owner of this project: the value of `git config user.name` (currently `JimorMarlow`). Take it
+from git yourself, do not ask. Start **every** answer with the owner's name and a comma, then
+continue the answer on the same line — so it is visible that this file was read and the rule is
+followed:
+
+`JimorMarlow, <the answer>`
+
+Even a one-line answer, an error report or a question starts with it.
+
+## No STL — extend ETL instead
+
+- Do not use STL (`std::vector`, `std::string`, ...) in this project: only `etl::`, no exceptions,
+  no RTTI, no unnecessary dynamic allocations.
+- If ETL lacks a common tool that the task needs, do not substitute `std::` and do not leave an
+  ad-hoc workaround in the project: implement it here in an `etl_*` file, debug it on the device,
+  and when it is finished propose it to the ETL developer for inclusion in the ETL library.
+
 ## Language
 
 - This file (`AGENTS.md`) is kept **in English**: every addition or edit here is written in English.
