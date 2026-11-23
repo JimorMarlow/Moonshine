@@ -1,24 +1,19 @@
-# Knbown problems
+# Known problems
 
 Найденные проблемы
-1. Поток воды вообще не доходит до веб-интерфейса — самое заметное. Поля deflegmater_water_flow / condenser_water_flow есть в src/settings.h и отдаются в JSON (src/web-ui.cpp), но в src/main.cpp check_flow() только рисует спиннер на LCD и ничего не пишет в state_t. Итог: на дашборде поток всегда 0 ml/min, а правило статуса (src/web-ui.cpp) при баке >55 °C и DFT >30 °C выдаёт красные «Нет воды в охладителе/дефлегматоре!» даже когда вода идёт. Плюс сам поток в ml/min нигде не считается (в README это честно названо калибровкой импульсов).
 
-2. Битый кусок JS после переноса макета. src/web-ui.cpp: e[t.toLowerCase().replace(".","_")] даёт ключи dfflow/coolflow, которых в JSON нет (там deflegmater_water_flow/condenser_water_flow), поэтому n === undefined: колёса крутятся всегда с максимальной скоростью, иконка предупреждения не показывается никогда, а в группу колеса добавляется класс трубы flow-wheel-*; поиск DFFlowWaterInPipe — мёртвый код (реальные id dfWaterInPipe). В макете было sensorData[sensor] (qwen-distillation.045.html).
+1. Отдача главной страницы копирует HTML_PAGE (31.6 КБ) в кучу на каждый GET / — `String html = FPSTR(HTML_PAGE)` в `handle_root()` (`src/web-ui.cpp`), затем три `replace()` могут потребовать ещё буфер. Под ESP8266 это было близко к пределу, на ESP32 уже терпимо, но это транзиентные ~63 КБ и фрагментация кучи при долгой работе. Надёжнее отрендерить страницу один раз при старте сервера и отдавать готовую строку: тема и язык применяются при сохранении настроек с перезагрузкой.
 
-3. Wi-Fi setup из v1.2.11 — только бэкенд. Класс etl::wifi::wifi_setup нигде не создаётся, маршрутов /api/scan|connect|save|reset|ap_settings нет (в src/web-ui.cpp только три), макет qwen-wifi_setup.008.html не подключён, а hasClicks(3) в src/main.cpp лишь печатает «start wi-fi setup». Коммит честно говорил «не проверено».
+2. `/api/state` опрашивается каждые 500 мс и собирается 15+ конкатенациями `String` (`state_to_json`). Тот же источник фрагментации: заменить на `snprintf` в статический буфер или на ArduinoJson 7 (уже есть в `lib_deps`, но в `src/` не используется).
 
-4. Риск по куче при отдаче главной страницы. src/web-ui.cpp делает String html = FPSTR(HTML_PAGE) — страница 26 140 символов копируется в кучу при каждом GET /, затем replace может потребовать ещё буфер. При 30.5 КБ статики и работающем Wi-Fi на ESP8266 это близко к пределу: в худшем случае пустая страница или незаменённый ${VERSION}. Надёжнее отдавать частями из PROGMEM (sendContent_P) или хранить страницу в LittleFS.
+3. Мелочи, но стоит знать:
 
-5. Мелочи, но стоит знать:
-
-src/settings.h: опционалы инициализированы 0.0, поэтому до первого замера дашборд показывает 0.0°, а не --.-.
-src/etl_wifi_setup.cpp: reset_settings() сбрасывает на server_config_t() → espdevice / ESP_Device_AP, а не на проектные moonshine / Moonshine_AP.
-LittleFS.begin()/end() в save/load/reset размонтирует ФС; если позже положить UI в LittleFS — сломается. Кстати, AGENTS.md утверждает, что UI отдаётся из LittleFS, а на деле из PROGMEM.
-src/etl_wifi_setup.h использует std::vector/std::sort без <vector>/<algorithm> — сейчас тянется транзитивно, хрупко.
-src/sensor_flow.cpp: total_count += pulse_count; pulse_count = 0; может потерять импульс между чтением и обнулением (редко, только на высоких потоках).
-src/pinout.h: F_DEFLEGMATOR_WATER_PIN = 10 — это GPIO10 (SD_D3, ножка флеша). Работает только при DIO/DOUT-режиме флеша; при QIO будут отказы. Пины не трогал (по AGENTS.md), просто уточни.
+`handle_root()` ставит `Content-Type` дважды: через `sendHeader()` и через `send(200, "text/html", ...)`.
+LCD показывает поток только спиннером, без числового значения в мл/мин.
 
 # На будущее: serial-лог для DSH (Вариант B)
+
+Заметка писалась под Windows (COM-порты, пути `C:\Users\jimor\...`), в проекте пока нет ни `tools/`, ни `logs/` — задача не начата.
 
 **Задача:** дать агенту (DSH) читать вывод с платы, не мешая человеку и не конфликтуя за COM-порт.
 

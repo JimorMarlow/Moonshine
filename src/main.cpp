@@ -264,6 +264,19 @@ void check_flow(etl::shared_ptr<flow_sensor_t> f)
         lcd.print(f->format_calibrate_data(r));
       }
     }
+
+    // update state: расход воды в мл/мин для веб-интерфейса
+    settings::moonshine::state_t state = get_moonshine_state();
+    const float flow_ml = f->get_minute_flow_ml();
+
+    if(flow_deflegmator && flow_deflegmator->get_name() == f->get_name()) {
+      state.deflegmater_water_flow = flow_ml;
+    }
+    else if(flow_condenser && flow_condenser->get_name() == f->get_name()) {
+      state.condenser_water_flow = flow_ml;
+    }
+
+    update_moonshine_state(state);
   }
 }
 

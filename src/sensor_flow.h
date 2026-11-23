@@ -66,6 +66,8 @@ public:
     // Измерение скорости минутного потока l/min
     uint32_t get_samples_flow_interval() const { return samples_flow_interval; }
     float get_minute_flow_rate() const { return minute_flow_rate; }
+    // То же значение в мл/мин: датчики рассчитаны на малые потоки, веб-интерфейс и пороги - в миллилитрах
+    float get_minute_flow_ml() const { return minute_flow_rate * 1000.0f; }
     void  set_minute_flow_rate(float value) { minute_flow_rate = value; }
 
     bool update_minute_flow_rate(int add_pulses);  // Добавить новые отсчеты и рассчитать поток

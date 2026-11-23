@@ -256,6 +256,8 @@ namespace webui
         }
         applyTranslations();
         const COLOR_BLENDER=[{temp:15,color:"#2980b9"},{temp:20,color:"#3498db"},{temp:25,color:"#f1c40f"},{temp:28,color:"#e67e22"},{temp:30,color:"#e74c3c"},{temp:35,color:"#c0392b"}];
+        // Порог "нет воды", мл/мин: игольчатый кран на подаче закрывается полностью, остаточного потока нет
+        const NO_WATER_ML=5;
         document.getElementById("settingsBtn").addEventListener("click",function(){location="/api/settings"});
         let lastUpdateTime=Date.now(),connectionState="connected";
         function updateConnectionState(){const e=Date.now(),t=(e-lastUpdateTime)/1e3,n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText");t>=20?(connectionState="error",n.className="status-bar status-error",o.textContent="✕",r.textContent=tr('status_no_response')):t>=10?(connectionState="warning",n.className="status-bar status-warning",o.textContent="⚠",r.textContent=tr('status_no_response')):connectionState="connected"}
@@ -270,32 +272,33 @@ namespace webui
         function updateDropIndicator(e){const t=document.getElementById("dropIndicator");if(!t)return;if(e<65)t.style.display="none",t.classList.remove("drop-blink-1hz","drop-blink-2hz","drop-blink-4hz");else{if(t.style.display="block",t.classList.remove("drop-blink-1hz","drop-blink-2hz","drop-blink-4hz"),e>=75)t.classList.add("drop-blink-4hz");else if(e>=70)t.classList.add("drop-blink-2hz");else t.classList.add("drop-blink-1hz")}}
         function updateHeaterBubbles(e){const t=document.querySelectorAll(".bubble");if(!t.length)return;let n="";e>90?n="bubble-speed-7":e>85?n="bubble-speed-6":e>80?n="bubble-speed-5":e>75?n="bubble-speed-4":e>70?n="bubble-speed-3":e>65?n="bubble-speed-2":e>60&&(n="bubble-speed-1"),t.forEach((e=>{e.classList.remove("bubble-speed-1","bubble-speed-2","bubble-speed-3","bubble-speed-4","bubble-speed-5","bubble-speed-6","bubble-speed-7"),n?(e.classList.add(n),e.style.display="block"):e.style.display="none"}))}
         function getColumnColors(e,t){return{low:getTempColor(e>35?35:e),high:getTempColor(t>35?35:t)}}
-        function checkRules(e){const t=[],{Heater:n,CoolFlow:o,CoolT:r,DFT:s,DFFlow:a}=e;n.value>55&&0===o.value&&t.push({type:"warning",text:tr('warn_turn_on_cooling')}),r.value>30&&(0===o.value?t.push({type:"error",text:tr('err_no_water_condenser')}):t.push({type:"warning",text:tr('warn_add_water_condenser')})),s.value>30&&(0===a.value?t.push({type:"error",text:tr('err_no_water_deflegmator')}):t.push({type:"warning",text:tr('warn_add_water_deflegmator')}));return 0===t.length&&t.push({type:"ok",text:tr('status_ok')}),t}
+        function checkRules(e){const t=[],{Heater:n,CoolFlow:o,CoolT:r,DFT:s,DFFlow:a}=e;n.value>55&&o.value<NO_WATER_ML&&t.push({type:"warning",text:tr('warn_turn_on_cooling')}),r.value>30&&(o.value<NO_WATER_ML?t.push({type:"error",text:tr('err_no_water_condenser')}):t.push({type:"warning",text:tr('warn_add_water_condenser')})),s.value>30&&(a.value<NO_WATER_ML?t.push({type:"error",text:tr('err_no_water_deflegmator')}):t.push({type:"warning",text:tr('warn_add_water_deflegmator')}));return 0===t.length&&t.push({type:"ok",text:tr('status_ok')}),t}
         function updateStatusBar(e){if(connectionState!=="connected")return;const t=checkRules(e),n=document.getElementById("statusBar"),o=document.getElementById("statusIcon"),r=document.getElementById("statusText"),s={error:3,warning:2,ok:1},a=t.reduce(((e,t)=>s[t.type]>s[e.type]?t:e));n.className="status-bar",n.classList.add(`status-${a.type}`),o.textContent="ok"===a.type?"✓":"warning"===a.type?"⚠":"✕",r.textContent=a.text}
         function updateSensors(e){
             if(connectionState!=="connected")return;
-            document.getElementById("valueHeaterNum").textContent=e.heater_temperature?formatTemp(e.heater_temperature)+"°":"--.-°";
-            document.getElementById("valueSteamNum").textContent=e.steam_temperature?formatTemp(e.steam_temperature)+"°":"--.-°";
-            document.getElementById("valueDFTNum").textContent=e.deflegmater_temperature?formatTemp(e.deflegmater_temperature)+"°":"--.-°";
-            document.getElementById("valueCoolTNum").textContent=e.condenser_temperature?formatTemp(e.condenser_temperature)+"°":"--.-°";
-            document.getElementById("cardValueHeater").textContent=e.heater_temperature?formatTemp(e.heater_temperature):"--.-";
-            document.getElementById("cardValueSteam").textContent=e.steam_temperature?formatTemp(e.steam_temperature):"--.-";
-            document.getElementById("cardValueDFT").textContent=e.deflegmater_temperature?formatTemp(e.deflegmater_temperature):"--.-";
-            document.getElementById("cardValueCoolT").textContent=e.condenser_temperature?formatTemp(e.condenser_temperature):"--.-";
-            document.getElementById("cardValueDFFlow").textContent=e.deflegmater_water_flow.toFixed(0);
-            document.getElementById("cardValueCoolFlow").textContent=e.condenser_water_flow.toFixed(0);
-            document.getElementById("svgValueDFFlow").textContent=e.deflegmater_water_flow.toFixed(0);
-            document.getElementById("svgValueCoolFlow").textContent=e.condenser_water_flow.toFixed(0);
+            const dfFlow=Number(e.deflegmater_water_flow)||0,coolFlow=Number(e.condenser_water_flow)||0;
+            document.getElementById("valueHeaterNum").textContent=e.heater_temperature!=null?formatTemp(e.heater_temperature)+"°":"--.-°";
+            document.getElementById("valueSteamNum").textContent=e.steam_temperature!=null?formatTemp(e.steam_temperature)+"°":"--.-°";
+            document.getElementById("valueDFTNum").textContent=e.deflegmater_temperature!=null?formatTemp(e.deflegmater_temperature)+"°":"--.-°";
+            document.getElementById("valueCoolTNum").textContent=e.condenser_temperature!=null?formatTemp(e.condenser_temperature)+"°":"--.-°";
+            document.getElementById("cardValueHeater").textContent=e.heater_temperature!=null?formatTemp(e.heater_temperature):"--.-";
+            document.getElementById("cardValueSteam").textContent=e.steam_temperature!=null?formatTemp(e.steam_temperature):"--.-";
+            document.getElementById("cardValueDFT").textContent=e.deflegmater_temperature!=null?formatTemp(e.deflegmater_temperature):"--.-";
+            document.getElementById("cardValueCoolT").textContent=e.condenser_temperature!=null?formatTemp(e.condenser_temperature):"--.-";
+            document.getElementById("cardValueDFFlow").textContent=dfFlow.toFixed(0);
+            document.getElementById("cardValueCoolFlow").textContent=coolFlow.toFixed(0);
+            document.getElementById("svgValueDFFlow").textContent=dfFlow.toFixed(0);
+            document.getElementById("svgValueCoolFlow").textContent=coolFlow.toFixed(0);
             document.getElementById("cardValueUptime").textContent=formatUptime(e.uptime_ms);
-            ["DFFlow","CoolFlow"].forEach((t=>{const n=e[t.toLowerCase().replace(".","_")],o=document.getElementById("wheel"+t.replace(".","")+"Group"),r=document.getElementById("warning"+t.replace(".",""));if(o&&r){if(n<10)o.style.display="none",r.style.display="block";else{o.style.display="block",r.style.display="none";const s=document.getElementById(t.replace(".","")+"WaterInPipe");s&&(s.classList.remove("flow-slow","flow-medium","flow-fast"),s.classList.add(getFlowPipeClass(n)),s.style.strokeDasharray=""),o.classList.remove("flow-wheel-slow","flow-wheel-medium","flow-wheel-fast"),o.classList.add(getFlowWheelClass(n))}}}));
-            const t=document.getElementById("dfWaterOutPipe");t&&(t.style.stroke=getTempColor(e.deflegmater_temperature||20),e.deflegmater_water_flow>=10?(t.classList.remove("flow-slow","flow-medium","flow-fast"),t.classList.add(getFlowPipeClass(e.deflegmater_water_flow)),t.style.strokeDasharray=""):(t.classList.remove("flow-slow","flow-medium","flow-fast"),t.style.strokeDasharray="none"));
-            const n=document.getElementById("coolWaterOutPipe");n&&(n.style.stroke=getTempColor(e.condenser_temperature||20),e.condenser_water_flow>=10?(n.classList.remove("flow-slow","flow-medium","flow-fast"),n.classList.add(getFlowPipeClass(e.condenser_water_flow)),n.style.strokeDasharray=""):(n.classList.remove("flow-slow","flow-medium","flow-fast"),n.style.strokeDasharray="none"));
+            [{id:"DFFlow",value:dfFlow,pipe:"dfWaterInPipe"},{id:"CoolFlow",value:coolFlow,pipe:"coolWaterInPipe"}].forEach((c=>{const n=c.value,o=document.getElementById("wheel"+c.id+"Group"),r=document.getElementById("warning"+c.id),s=document.getElementById(c.pipe);if(n<NO_WATER_ML){o&&(o.style.display="none");r&&(r.style.display="block");s&&(s.classList.remove("flow-slow","flow-medium","flow-fast"),s.style.strokeDasharray="none")}else{o&&(o.style.display="block",o.classList.remove("flow-wheel-slow","flow-wheel-medium","flow-wheel-fast"),o.classList.add(getFlowWheelClass(n)));r&&(r.style.display="none");s&&(s.classList.remove("flow-slow","flow-medium","flow-fast"),s.classList.add(getFlowPipeClass(n)),s.style.strokeDasharray="")}}));
+            const t=document.getElementById("dfWaterOutPipe");t&&(t.style.stroke=getTempColor(e.deflegmater_temperature||20),dfFlow>=NO_WATER_ML?(t.classList.remove("flow-slow","flow-medium","flow-fast"),t.classList.add(getFlowPipeClass(dfFlow)),t.style.strokeDasharray=""):(t.classList.remove("flow-slow","flow-medium","flow-fast"),t.style.strokeDasharray="none"));
+            const n=document.getElementById("coolWaterOutPipe");n&&(n.style.stroke=getTempColor(e.condenser_temperature||20),coolFlow>=NO_WATER_ML?(n.classList.remove("flow-slow","flow-medium","flow-fast"),n.classList.add(getFlowPipeClass(coolFlow)),n.style.strokeDasharray=""):(n.classList.remove("flow-slow","flow-medium","flow-fast"),n.style.strokeDasharray="none"));
             const o=getColumnColors(e.heater_temperature||20,e.steam_temperature||20);document.getElementById("colStopLow").setAttribute("stop-color",o.low),document.getElementById("colStopHigh").setAttribute("stop-color",o.high);
             const r=getTempColor((e.steam_temperature||20)>35?35:(e.steam_temperature||20)),s=getTempColor(e.condenser_temperature||20);document.getElementById("vapStopLow").setAttribute("stop-color",r),document.getElementById("vapStopHigh").setAttribute("stop-color",s);
             const a=document.getElementById("heater");a&&(a.style.stroke=getTempColor(e.heater_temperature||20));
             updateDropIndicator(e.steam_temperature||20);
             updateHeaterBubbles(e.heater_temperature||20);
-            updateStatusBar({Heater:{value:e.heater_temperature||20},CoolFlow:{value:e.condenser_water_flow},CoolT:{value:e.condenser_temperature||20},DFT:{value:e.deflegmater_temperature||20},DFFlow:{value:e.deflegmater_water_flow}});
+            updateStatusBar({Heater:{value:e.heater_temperature||20},CoolFlow:{value:coolFlow},CoolT:{value:e.condenser_temperature||20},DFT:{value:e.deflegmater_temperature||20},DFFlow:{value:dfFlow}});
             document.getElementById("lastUpdate").textContent=new Date().toLocaleTimeString(currentLang==="ru"?"ru-RU":"en-GB");
         }
         function fetchState(){fetch("/api/state").then((e=>e.json())).then((e=>{lastUpdateTime=Date.now();updateSensors(e)})).catch((e=>{console.error("Error fetching state:",e)}));}

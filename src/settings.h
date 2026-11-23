@@ -11,10 +11,11 @@ namespace moonshine
     struct state_t
     {
         uint32_t             uptime_ms = 0;                // Время от начала работы
-        etl::optional<float> steam_temperature = 0.0;      // Температура °C пара в верхней части колонных
-        etl::optional<float> heater_temperature = 0.0;     // Температура °C в нагревательном баке
-        etl::optional<float> deflegmater_temperature = 0.0;// Температура °C воды на выходе дефлегматора
-        etl::optional<float> condenser_temperature = 0.0;  // Температура °C воды на выходе охладителя
+        // Пока датчик не дал показаний - значения пустые (в JSON уходит null, на странице "--.-")
+        etl::optional<float> steam_temperature;             // Температура °C пара в верхней части колонных
+        etl::optional<float> heater_temperature;            // Температура °C в нагревательном баке
+        etl::optional<float> deflegmater_temperature;       // Температура °C воды на выходе дефлегматора
+        etl::optional<float> condenser_temperature;         // Температура °C воды на выходе охладителя
 
         float deflegmater_water_flow = 0.0; // Скорость потока воды ml/min на выходе дефлегматора
         float condenser_water_flow = 0.0;   // Скорость потока воды ml/min на выходе охладителя
