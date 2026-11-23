@@ -18,9 +18,11 @@ namespace webui
     // HTML шаблон веб-интерфейса
     // Для обновления: взять HTML из docs/web-ui/qwen-distillation.xxx.html
     // и заменить версию в заголовке на актуальную
-    static const char HTML_PAGE[] PROGMEM = R"rawliteral(
+    static const char HTML_PAGE_A[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
-<html lang="${LANG}">
+<html lang=")rawliteral";
+
+    static const char HTML_PAGE_B[] PROGMEM = R"rawliteral(">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -108,11 +110,16 @@ namespace webui
         @media(max-width:900px){.main-panel{grid-template-columns:1fr;grid-template-rows:auto auto;height:auto}.scheme-container{height:auto;min-height:480px;aspect-ratio:530/480}.sensors-panel{height:auto;max-height:none;overflow:visible}.sensors-content{overflow-y:visible}.bold-btn{width:40px;height:40px;font-size:20px}.uptime-value{font-size:24px}}
     </style>
 </head>
-<body class="${UI_CLASS}">
+<body class=")rawliteral";
+
+    // Страница отдаётся частями прямо из PROGMEM: плейсхолдеры подставляются между кусками,
+    // поэтому копия ~31 КБ в кучу на каждый запрос не нужна (экономия и меньше фрагментации).
+    static const char HTML_PAGE_C[] PROGMEM = R"rawliteral(">
     <div class="container">
         <div class="main-panel">
             <div class="scheme-container">
-                <div class="internal-header">Moonshine v${VERSION}</div>
+                <div class="internal-header">Moonshine v)rawliteral";
+    static const char HTML_PAGE_D[] PROGMEM = R"rawliteral(</div>
                 <div id="statusBar" class="status-bar status-ok">
                     <span class="status-icon" id="statusIcon">✓</span>
                     <span id="statusText" data-i18n="status_ok">Система работает нормально</span>
@@ -203,7 +210,8 @@ namespace webui
     </div>
     <script>
         // Язык подставляет сервер из ui_config
-        const currentLang = '${LANG}';
+        const currentLang = ')rawliteral";
+    static const char HTML_PAGE_E[] PROGMEM = R"rawliteral(';
         const TR = {
             ru: {
                 page_title: 'Moonshine — мониторинг',
@@ -373,6 +381,13 @@ namespace webui
         schedule_settings_cb();
     }
 
+    // Отправка куска страницы из PROGMEM: длина куска известна на этапе компиляции
+    template <size_t N>
+    static void send_page_part(etl_web_server_t& server, const char (&part)[N])
+    {
+        server.sendContent_P(part, N - 1);
+    }
+
     void moonshine_web_server::handle_root()
     {
         Serial.println(F("[WebUI] Serving HTML page"));
@@ -396,14 +411,22 @@ namespace webui
             }
         }
 
-        String html = FPSTR(HTML_PAGE);
-        html.replace("${VERSION}", MS_VERSION_STRING);
-        html.replace("${LANG}", lang);
-        html.replace("${UI_CLASS}", ui_class);
-
-        m_server->sendHeader("Content-Type", "text/html");
+        // Страница целиком остаётся в PROGMEM и уходит частями: копии ~31 КБ в куче
+        // на каждый запрос нет. Длина заранее неизвестна, поэтому HTTP/1.1 - chunked.
+        m_server->setContentLength(CONTENT_LENGTH_UNKNOWN);
         m_server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        m_server->send(200, "text/html", html);
+        m_server->send(200, "text/html", "");
+
+        send_page_part(*m_server, HTML_PAGE_A);
+        m_server->sendContent(lang);
+        send_page_part(*m_server, HTML_PAGE_B);
+        m_server->sendContent(ui_class);
+        send_page_part(*m_server, HTML_PAGE_C);
+        m_server->sendContent_P(MS_VERSION_STRING, sizeof(MS_VERSION_STRING) - 1);
+        send_page_part(*m_server, HTML_PAGE_D);
+        m_server->sendContent(lang);
+        send_page_part(*m_server, HTML_PAGE_E);
+        m_server->sendContent("", 0);   // завершающий chunk
     }
 
     void moonshine_web_server::handle_api_state()
@@ -412,9 +435,11 @@ namespace webui
 
         if (s_state_getter) {
             settings::moonshine::state_t state = s_state_getter();
-            String json = state_to_json(state);
 
-            m_server->sendHeader("Content-Type", "application/json");
+            // JSON собирается в стековый буфер: без десятков временных String каждые 500 мс
+            char json[320];
+            state_to_json(state, json, sizeof(json));
+
             m_server->sendHeader("Cache-Control", "no-cache");
             m_server->send(200, "application/json", json);
         } else {
@@ -430,57 +455,40 @@ namespace webui
                       String(F("\",\"hostname\":\"")) + get_hostname() +
                       String(F("\"}"));
 
-        m_server->sendHeader("Content-Type", "application/json");
         m_server->send(200, "application/json", json);
     }
 
-    String moonshine_web_server::state_to_json(const settings::moonshine::state_t& state)
+    // Температура в JSON: число с одним знаком или null, если датчик ещё не дал показаний
+    static void format_json_temperature(char* out, size_t size, const etl::optional<float>& value)
     {
-        String json = String(F("{"));
-        json += String(F("\"uptime_ms\":")) + String(state.uptime_ms) + String(F(","));
-
-        // Steam temperature
-        json += String(F("\"steam_temperature\":"));
-        if (state.steam_temperature) {
-            json += String(*state.steam_temperature, 1);
+        if (value) {
+            snprintf(out, size, "%.1f", (double)*value);
         } else {
-            json += "null";
+            snprintf(out, size, "null");
         }
-        json += ",";
+    }
 
-        // Heater temperature
-        json += String(F("\"heater_temperature\":"));
-        if (state.heater_temperature) {
-            json += String(*state.heater_temperature, 1);
-        } else {
-            json += "null";
+    size_t moonshine_web_server::state_to_json(const settings::moonshine::state_t& state, char* out, size_t size)
+    {
+        char steam[12], heater[12], deflegmater[12], condenser[12];
+        format_json_temperature(steam, sizeof(steam), state.steam_temperature);
+        format_json_temperature(heater, sizeof(heater), state.heater_temperature);
+        format_json_temperature(deflegmater, sizeof(deflegmater), state.deflegmater_temperature);
+        format_json_temperature(condenser, sizeof(condenser), state.condenser_temperature);
+
+        const int length = snprintf(out, size,
+            "{\"uptime_ms\":%lu,"
+            "\"steam_temperature\":%s,\"heater_temperature\":%s,"
+            "\"deflegmater_temperature\":%s,\"condenser_temperature\":%s,"
+            "\"deflegmater_water_flow\":%.1f,\"condenser_water_flow\":%.1f}",
+            (unsigned long)state.uptime_ms, steam, heater, deflegmater, condenser,
+            (double)state.deflegmater_water_flow, (double)state.condenser_water_flow);
+
+        if (length < 0) {
+            if (size > 0) out[0] = '\0';
+            return 0;
         }
-        json += ",";
-
-        // Deflegmator temperature
-        json += String(F("\"deflegmater_temperature\":"));
-        if (state.deflegmater_temperature) {
-            json += String(*state.deflegmater_temperature, 1);
-        } else {
-            json += "null";
-        }
-        json += ",";
-
-        // Condenser temperature
-        json += String(F("\"condenser_temperature\":"));
-        if (state.condenser_temperature) {
-            json += String(*state.condenser_temperature, 1);
-        } else {
-            json += "null";
-        }
-        json += ",";
-
-        // Flow rates
-        json += String(F("\"deflegmater_water_flow\":")) + String(state.deflegmater_water_flow, 1) + String(F(","));
-        json += String(F("\"condenser_water_flow\":")) + String(state.condenser_water_flow, 1);
-
-        json += String(F("}"));
-        return json;
+        return (size_t)length < size ? (size_t)length : size - 1;
     }
 
     etl::webui::server_config_t make_default_config()

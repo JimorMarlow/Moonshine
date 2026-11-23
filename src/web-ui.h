@@ -122,9 +122,11 @@ namespace webui
         /**
          * @brief Генерация JSON из состояния системы
          * @param state Состояние системы
-         * @return JSON строка
+         * @param out Буфер для JSON строки
+         * @param size Размер буфера
+         * @return Длина записанной строки без завершающего нуля
          */
-        virtual String state_to_json(const settings::moonshine::state_t& state);
+        virtual size_t state_to_json(const settings::moonshine::state_t& state, char* out, size_t size);
 
         static state_getter_t s_state_getter;  ///< Функция получения состояния
     };
