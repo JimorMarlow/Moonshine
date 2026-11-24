@@ -514,9 +514,9 @@ namespace webui
         return cfg;
     }
 
-    // Временная иконка устройства для страницы настроек.
-    // Источник - docs/images/icon_moonshine_mini.svg: пробный упрощённый вариант,
-    // его планируется заменить. При замене обновить и файл, и эту строку.
+    // Иконка устройства для страницы настроек: упрощённый вариант из
+    // docs/images/icon_moonshine_mini.svg (полноразмерный исходник -
+    // docs/images/icon_moonshine.svg). При правке иконки обновить и файл, и эту строку.
     static const char DEVICE_ICON_SVG[] PROGMEM = R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" width="127" height="138">
   <!-- Moonshine: колба с чипом, холодильник, Wi-Fi -->
   <g fill="none" stroke="#1D6FC0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -534,12 +534,12 @@ namespace webui
     <path d="M25.2 30H30"/>
     <rect x="30" y="18" width="9" height="24" rx="4.5" fill="#FFFFFF"/>
     <rect x="32" y="30" width="5" height="9" rx="2.5" fill="#B7E0FA" stroke="none"/>
-    <!-- термометр -->
+    <!-- термометр: красное целиком внутри корпуса, низ корпуса остаётся виден -->
     <rect x="21.8" y="12" width="4.8" height="13.5" rx="2.4" fill="#FFFFFF"/>
-    <path d="M24.2 16v7" stroke="#E8604C" stroke-width="1.6"/>
-    <circle cx="24.2" cy="25.7" r="2.7" fill="#E8604C" stroke="none"/>
-    <!-- Wi-Fi -->
-    <path d="M29 11a7 7 0 0 1 14 0"/>
+    <path d="M24.2 14.8v5.4" stroke="#E8604C" stroke-width="1.6"/>
+    <circle cx="24.2" cy="22.4" r="2.2" fill="#E8604C" stroke="none"/>
+    <!-- Wi-Fi: обе дуги концентричны точке (36, 15.2), радиусы 9 и 4.6 -->
+    <path d="M28.2 10.8a9 9 0 0 1 15.6 0"/>
     <path d="M32 13a4.6 4.6 0 0 1 8 0"/>
     <circle cx="36" cy="15.2" r="1.2" fill="#1D6FC0" stroke="none"/>
   </g>

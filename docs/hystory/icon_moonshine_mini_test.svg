@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" width="127" height="138">
+  <!-- Moonshine: колба с чипом, холодильник, Wi-Fi -->
+  <!-- Тестовый вариант: Wi-Fi-дуги концентричны точке, красная полоска термометра короче и выше -->
+  <g fill="none" stroke="#1D6FC0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- колба с горловиной -->
+    <path d="M12.5 25V17.5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 19.5 17.5V25A11 11 0 1 1 12.5 25Z" fill="#FFFFFF"/>
+    <!-- жидкость -->
+    <path d="M6.3 33h19.4v3a9.7 9.7 0 0 1-19.4 0Z" fill="#B7E0FA" stroke="none"/>
+    <!-- чип в жидкости -->
+    <rect x="12" y="32" width="8" height="8" rx="1.2" fill="#FFFFFF" stroke="#1D3F6E" stroke-width="1.2"/>
+    <g stroke="#1D3F6E" stroke-width="1.2">
+      <path d="M9.6 34H12M9.6 38H12M20 34h2.4M20 38h2.4"/>
+    </g>
+    <circle cx="16" cy="36" r="1.3" fill="#1D3F6E" stroke="none"/>
+    <!-- патрубок и холодильник-пробирка -->
+    <path d="M25.2 30H30"/>
+    <rect x="30" y="18" width="9" height="24" rx="4.5" fill="#FFFFFF"/>
+    <rect x="32" y="30" width="5" height="9" rx="2.5" fill="#B7E0FA" stroke="none"/>
+    <!-- термометр: красное приподнято внутрь корпуса, низ корпуса остаётся виден -->
+    <rect x="21.8" y="12" width="4.8" height="13.5" rx="2.4" fill="#FFFFFF"/>
+    <path d="M24.2 14.8v5.4" stroke="#E8604C" stroke-width="1.6"/>
+    <circle cx="24.2" cy="22.4" r="2.2" fill="#E8604C" stroke="none"/>
+    <!-- Wi-Fi: обе дуги концентричны точке (36, 15.2), радиусы 9 и 4.6 -->
+    <path d="M28.2 10.8a9 9 0 0 1 15.6 0"/>
+    <path d="M32 13a4.6 4.6 0 0 1 8 0"/>
+    <circle cx="36" cy="15.2" r="1.2" fill="#1D6FC0" stroke="none"/>
+  </g>
+</svg>

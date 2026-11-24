@@ -10,3 +10,4 @@
 - `WEB_UI-HISTORY.md` — журнал изменений веб-интерфейса
 - `qwen-distillation.043.html`, `qwen-distillation.045.html` — макеты дашборда, с которых переносилась разметка
 - `qwen-wifi_setup.008.html` — макет страницы настройки Wi-Fi
+- `icon_moonshine_mini_test.svg` — промежуточный вариант иконки; из него собран утверждённый `docs/images/icon_moonshine_mini.svg`
