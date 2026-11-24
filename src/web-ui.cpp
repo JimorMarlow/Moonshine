@@ -517,33 +517,7 @@ namespace webui
     // Иконка устройства для страницы настроек: упрощённый вариант из
     // docs/images/icon_moonshine_mini.svg (полноразмерный исходник -
     // docs/images/icon_moonshine.svg). При правке иконки обновить и файл, и эту строку.
-    static const char DEVICE_ICON_SVG[] PROGMEM = R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 52" width="127" height="138">
-  <!-- Moonshine: колба с чипом, холодильник, Wi-Fi -->
-  <g fill="none" stroke="#1D6FC0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <!-- колба с горловиной -->
-    <path d="M12.5 25V17.5a1.5 1.5 0 0 1 1.5-1.5h4A1.5 1.5 0 0 1 19.5 17.5V25A11 11 0 1 1 12.5 25Z" fill="#FFFFFF"/>
-    <!-- жидкость -->
-    <path d="M6.3 33h19.4v3a9.7 9.7 0 0 1-19.4 0Z" fill="#B7E0FA" stroke="none"/>
-    <!-- чип в жидкости -->
-    <rect x="12" y="32" width="8" height="8" rx="1.2" fill="#FFFFFF" stroke="#1D3F6E" stroke-width="1.2"/>
-    <g stroke="#1D3F6E" stroke-width="1.2">
-      <path d="M9.6 34H12M9.6 38H12M20 34h2.4M20 38h2.4"/>
-    </g>
-    <circle cx="16" cy="36" r="1.3" fill="#1D3F6E" stroke="none"/>
-    <!-- патрубок и холодильник-пробирка -->
-    <path d="M25.2 30H30"/>
-    <rect x="30" y="18" width="9" height="24" rx="4.5" fill="#FFFFFF"/>
-    <rect x="32" y="30" width="5" height="9" rx="2.5" fill="#B7E0FA" stroke="none"/>
-    <!-- термометр: красное целиком внутри корпуса, низ корпуса остаётся виден -->
-    <rect x="21.8" y="12" width="4.8" height="13.5" rx="2.4" fill="#FFFFFF"/>
-    <path d="M24.2 14.8v5.4" stroke="#E8604C" stroke-width="1.6"/>
-    <circle cx="24.2" cy="22.4" r="2.2" fill="#E8604C" stroke="none"/>
-    <!-- Wi-Fi: обе дуги концентричны точке (36, 15.2), радиусы 9 и 4.6 -->
-    <path d="M28.2 10.8a9 9 0 0 1 15.6 0"/>
-    <path d="M32 13a4.6 4.6 0 0 1 8 0"/>
-    <circle cx="36" cy="15.2" r="1.2" fill="#1D6FC0" stroke="none"/>
-  </g>
-</svg>)svg";
+    static const char DEVICE_ICON_SVG[] PROGMEM = R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150"><defs><clipPath id="c"><circle cx="48.5" cy="107" r="29"/></clipPath></defs><g fill="#fff" stroke="#007ad9" stroke-width="4" stroke-linejoin="round"><path d="M42 58v19a31 31 0 1 0 13 0V58"/><rect x="37" y="50" width="23" height="8" rx="3"/><path d="M106 77v51a7 7 0 0 0 14 0V77"/><rect x="101" y="71" width="24" height="7" rx="3"/></g><path clip-path="url(#c)" fill="#a2d6fd" d="M17 98q8-5 16 0t16 0t16 0t16 0v45H17z"/><path fill="#a2d6fd" d="M108 93h10v35a5 5 0 0 1-10 0z"/><g fill="#fff"><circle cx="31" cy="113" r="2"/><circle cx="44" cy="128" r="2"/><circle cx="66" cy="104" r="1.5"/><circle cx="115" cy="114" r="1.5"/><circle cx="111" cy="125" r="1.5"/></g><g fill="none" stroke="#1d436d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M50 97V24h20v33h10m14 0h19v19"/><path d="M97 30h6m-6 7h6m-6 8h6M109 26a8 8 0 0 1 8 8m-8-15a15 15 0 0 1 15 15"/><circle cx="109" cy="34" r="2.5" stroke-width="2"/></g><g stroke="#303030" stroke-width="3" stroke-linecap="round"><path fill="#fff" d="M82 50.5V30a5.5 5.5 0 0 1 11 0v20.5a8.5 8.5 0 1 1-11 0z"/><path d="M33 103h5m-5 5h5m-5 5h5m20-10h5m-5 5h5m-5 5h5m-20 5v5m5-5v5m5-5v5"/><rect fill="#fff" x="38" y="98" width="20" height="20"/><circle fill="none" cx="48" cy="108" r="4"/></g><g fill="#ff7f7f"><circle cx="87.5" cy="57" r="5"/><rect x="86" y="43" width="3" height="12"/></g></svg>)svg";
 
     etl::webui::device_info_t make_device_info()
     {
