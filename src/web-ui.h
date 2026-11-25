@@ -17,7 +17,7 @@
  * - Реальное время: данные получаются из settings::moonshine::state_t
  *
  * @note Для обновления макета веб-интерфейса:
- *       1. Взять актуальный файл из docs/hystory/qwen-distillation.xxx.html
+ *       1. Взять актуальный файл из docs/history/qwen-distillation.xxx.html
  *       2. Извлечь HTML/CSS/JS код
  *       3. Заменить данные симуляции на функцию get_state()
  *       4. Обновить версию в заголовке на MS_VERSION_STRING
